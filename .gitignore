@@ -1,0 +1,46 @@
+# Environment variables (NEVER commit these!)
+.env
+.env.local
+.env.*.local
+
+# Dependencies
+node_modules/
+venv/
+__pycache__/
+*.egg-info/
+dist/
+build/
+
+# Build artifacts
+cpp_crawler/build/
+*.o
+*.a
+*.so
+*.dylib
+devnavigator
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# Database
+database/*.db
+database/*.sqlite
+database/*.sqlite3
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# OS files
+Thumbs.db
+.DS_Store

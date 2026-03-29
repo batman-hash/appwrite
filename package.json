@@ -1,0 +1,36 @@
+{
+  "name": "devnavigator",
+  "version": "1.0.0",
+  "description": "Automated email campaign platform for educational initiatives",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "db:init": "python3 python_engine/database_manager.py",
+    "db:templates": "python3 python_engine/template_manager.py",
+    "build:cpp": "cd cpp_crawler && mkdir -p build && cd build && cmake .. && make",
+    "send:emails": "cd cpp_crawler/build && ./devnavigator",
+    "extract:emails": "python3 python_engine/email_extractor.py",
+    "test": "python3 -m pytest tests/",
+    "docker:build": "docker build -t devnavigator .",
+    "docker:run": "docker run -v $(pwd)/.env:/app/.env -v $(pwd)/database:/app/database devnavigator"
+  },
+  "keywords": [
+    "email",
+    "campaign",
+    "education",
+    "automation"
+  ],
+  "author": "DevNavigator Team",
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^16.0.0",
+    "express": "^4.18.0",
+    "sqlite3": "^5.1.6",
+    "nodemailer": "^6.8.0",
+    "axios": "^1.3.0"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.20"
+  }
+}
