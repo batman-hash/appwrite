@@ -14,6 +14,13 @@ from datetime import datetime
 
 load_dotenv()
 
+# Import tracking system
+try:
+    from tracking import EmailTracker
+    HAS_TRACKING = True
+except:
+    HAS_TRACKING = False
+
 
 # Email aliases for different campaign types (same email, different display names)
 EMAIL_ALIASES = {
@@ -74,7 +81,7 @@ class EmailSender:
     
     def send_test_email(self, to_email, subject, body, template_name=None, from_name=None):
         """
-        Send single test email
+        Send single test email with optional tracking
         Args:
             from_name: Display name for sender (e.g., "DevNavigator Jobs")
         Returns: (success: bool, message: str)
@@ -83,6 +90,23 @@ class EmailSender:
             # Replace variables
             body = body.replace('$email', to_email)
             body = body.replace('$date', datetime.now().strftime('%Y-%m-%d'))
+            
+            # Add tracking if available
+            if HAS_TRACKING:
+                tracker = EmailTracker()
+                
+                # Wrap Freelancer link with tracking
+                if 'https://www.freelancer.com' in body:
+                    tracking_link = tracker.get_tracking_link(
+                        'https://www.freelancer.com/get/matteo272?f=give',
+                        to_email,
+                        'freelancer_signup'
+                    )
+                    body = body.replace('https://www.freelancer.com/get/matteo272?f=give', tracking_link)
+                
+                # Add open tracking pixel (invisible 1x1 image)
+                tracking_pixel = tracker.get_tracking_pixel(to_email)
+                body = body + f"\n\n{tracking_pixel}"
             
             # Create message
             msg = MIMEMultipart('alternative')
