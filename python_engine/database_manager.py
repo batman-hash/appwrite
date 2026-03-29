@@ -28,18 +28,26 @@ class DatabaseManager:
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         
-        # Contacts table
+        # Contacts table (enriched with data source fields)
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS contacts (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 email TEXT UNIQUE NOT NULL,
                 name TEXT,
+                company TEXT,
+                department TEXT,
+                title TEXT,
+                phone TEXT,
+                country TEXT,
+                city TEXT,
                 source TEXT,
+                verified INTEGER DEFAULT 0,
                 consent INTEGER DEFAULT 0,
                 sent INTEGER DEFAULT 0,
                 opened INTEGER DEFAULT 0,
                 bounced INTEGER DEFAULT 0,
                 unsubscribed INTEGER DEFAULT 0,
+                data_source TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
@@ -90,6 +98,28 @@ class DatabaseManager:
             )
         """)
         
+        # IP Tracking and Geo-targeting table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS ip_tracking (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                ip_address TEXT UNIQUE NOT NULL,
+                country TEXT,
+                city TEXT,
+                latitude REAL,
+                longitude REAL,
+                timezone TEXT,
+                isp TEXT,
+                fraud_score INTEGER,
+                is_vpn INTEGER DEFAULT 0,
+                is_proxy INTEGER DEFAULT 0,
+                is_bot INTEGER DEFAULT 0,
+                threat_types TEXT,
+                data_source TEXT,
+                last_verified TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        
         # Create indexes for better query performance
         cursor.execute("""
             CREATE INDEX IF NOT EXISTS idx_contacts_email ON contacts(email)
@@ -101,7 +131,16 @@ class DatabaseManager:
             CREATE INDEX IF NOT EXISTS idx_contacts_consent ON contacts(consent)
         """)
         cursor.execute("""
+            CREATE INDEX IF NOT EXISTS idx_contacts_country ON contacts(country)
+        """)
+        cursor.execute("""
+            CREATE INDEX IF NOT EXISTS idx_contacts_company ON contacts(company)
+        """)
+        cursor.execute("""
             CREATE INDEX IF NOT EXISTS idx_email_logs_contact ON email_logs(contact_id)
+        """)
+        cursor.execute("""
+            CREATE INDEX IF NOT EXISTS idx_ip_tracking_address ON ip_tracking(ip_address)
         """)
         
         conn.commit()
