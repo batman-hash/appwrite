@@ -21,6 +21,7 @@ EMAIL_ALIASES = {
     'freelance_opportunities': 'DevNavigator Projects 💼',
     'marketing_partnership': 'DevNavigator Partnerships 🤝',
     'learning_program': 'DevNavigator Academy 🎓',
+    'earning_opportunity': 'Earning Opportunity Network 💰',
 }
 
 
@@ -141,24 +142,45 @@ class EmailSender:
         finally:
             conn.close()
     
-    def send_batch(self, subject, body, limit=None, dry_run=False, from_name=None):
+    def send_batch(self, subject, body, limit=None, dry_run=False, from_name=None, 
+                   emails=None, country=None, exclude_emails=None):
         """
-        Send emails to all stored contacts with optional display name
+        Send emails to selected contacts with optional filtering
         Args:
             from_name: Display name (e.g., "DevNavigator Jobs")
+            emails: List of specific emails to send to
+            country: Filter by country code (e.g., 'IN', 'US')
+            exclude_emails: List of emails to exclude
         Returns: (sent_count, failed_count)
         """
         try:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
             
-            # Get unsent contacts
-            query = "SELECT email FROM contacts WHERE sent = 0"
-            if limit:
-                query += f" LIMIT {limit}"
+            # Build query based on filters
+            if emails:
+                # Send to specific emails only
+                placeholders = ','.join(['?' for _ in emails])
+                query = f"SELECT email FROM contacts WHERE email IN ({placeholders}) AND sent = 0"
+                cursor.execute(query, emails)
+            elif country:
+                # Send to specific country
+                query = "SELECT email FROM contacts WHERE country = ? AND sent = 0"
+                cursor.execute(query, (country,))
+            else:
+                # Get all unsent contacts
+                query = "SELECT email FROM contacts WHERE sent = 0"
+                cursor.execute(query)
             
-            cursor.execute(query)
-            contacts = cursor.fetchall()
+            contacts = list(cursor.fetchall())
+            
+            # Exclude specific emails if provided
+            if exclude_emails:
+                contacts = [c for c in contacts if c[0] not in exclude_emails]
+            
+            if limit:
+                contacts = contacts[:limit]
+            
             conn.close()
             
             sent = 0
@@ -167,6 +189,12 @@ class EmailSender:
             print(f"\n📧 Sending to {len(contacts)} contacts...")
             if from_name:
                 print(f"📛 Sender name: {from_name}")
+            if emails:
+                print(f"🎯 Specific emails selected")
+            if country:
+                print(f"🌍 Country filter: {country}")
+            if exclude_emails:
+                print(f"🚫 Excluding: {len(exclude_emails)} emails")
             print("=" * 60)
             
             for i, (email,) in enumerate(contacts, 1):
@@ -312,6 +340,36 @@ $date
     }
     manager.add_template(**template4)
     
+    # Template 5: Earning Opportunity Network
+    template5 = {
+        'name': 'earning_opportunity',
+        'subject': 'Start Earning From Home - No Hidden Costs! 💰',
+        'body': '''Hi,
+
+I hope you're having a great day!
+
+We're currently building a growing network of people who want to start earning money from home — and the best part is, it's completely free to get started.
+
+No hidden costs. No upfront payments. Just an opportunity to learn, connect, and start earning online at your own pace.
+
+If you're interested and want to see how it works, check out the link below:
+👉 https://www.freelancer.com/get/matteo272?f=give
+
+Feel free to share this with anyone who wants to start earning from home.
+
+Let me know if you have any questions — happy to help!
+
+Best regards,
+Matteo
+Earning Opportunity Network
+
+---
+Email: $email | Date: $date
+''',
+        'is_default': False
+    }
+    manager.add_template(**template5)
+    
     print("\n✅ All templates created successfully!\n")
 
 
@@ -338,8 +396,8 @@ def show_templates():
         print(f"Error: {e}")
 
 
-def test_send_email(template_name=None, limit=3, dry_run=False):
-    """Send test emails to extracted contacts with email alias"""
+def test_send_email(template_name=None, limit=3, dry_run=False, emails=None, country=None, exclude_emails=None):
+    """Send test emails to selected contacts with optional filtering"""
     
     print("\n╔════════════════════════════════════════════════════════════╗")
     print("║           📧 TEST EMAIL SENDING                           ║")
@@ -375,7 +433,9 @@ def test_send_email(template_name=None, limit=3, dry_run=False):
         print()
     
     sender = EmailSender()
-    sent, failed = sender.send_batch(subject, body, limit=limit, dry_run=dry_run, from_name=from_name)
+    sent, failed = sender.send_batch(subject, body, limit=limit, dry_run=dry_run, 
+                                     from_name=from_name, emails=emails, 
+                                     country=country, exclude_emails=exclude_emails)
     
     print(f"\n✅ Complete!")
     if not dry_run:
@@ -388,41 +448,56 @@ def main():
     """Main CLI"""
     if len(sys.argv) < 2:
         print("""
-📧 Email Template & Test Send Tool (with Email Aliases)
+📧 Email Template & Test Send Tool (with Email Aliases & Filtering)
 
 Usage:
   python3 send_test_emails.py setup              # Create templates
   python3 send_test_emails.py list               # Show templates
-  python3 send_test_emails.py send [--dry-run]   # Send test emails
-  python3 send_test_emails.py send [--limit 5]   # Send to N contacts
+  python3 send_test_emails.py send [OPTIONS]     # Send test emails
+
+🎯 FILTERING OPTIONS:
+  --limit N                    # Send to N contacts max
+  --country CODE              # Filter by country (e.g., US, IN, GB)
+  --emails email1,email2,...  # Send to specific emails only
+  --exclude email1,email2,... # Exclude specific emails
+  --dry-run                   # Preview without sending
+  --template NAME             # Use specific template
 
 📛 EMAIL ALIASES (Different sender names, same email):
   - junior_dev_recruitment  → "DevNavigator Jobs 🚀"
   - freelance_opportunities → "DevNavigator Projects 💼"
   - marketing_partnership   → "DevNavigator Partnerships 🤝"
   - learning_program        → "DevNavigator Academy 🎓"
+  - earning_opportunity     → "Earning Opportunity Network 💰"
 
-Examples:
-  # Create templates with aliases
-  python3 send_test_emails.py setup
+EXAMPLES:
+  # Send to all (default)
+  python3 send_test_emails.py send --limit 10
   
-  # Show available templates
-  python3 send_test_emails.py list
+  # Send to specific emails only
+  python3 send_test_emails.py send --emails alex.kumar@startuptech.in,jane.smith@webagency.com
   
-  # Preview emails (dry run, shows email alias)
-  python3 send_test_emails.py send --dry-run
+  # Send to India contacts only
+  python3 send_test_emails.py send --country IN --dry-run
   
-  # Send to first 3 contacts with automatic alias
-  python3 send_test_emails.py send --limit 3
+  # Send to all except certain people
+  python3 send_test_emails.py send --exclude alex.kumar@startuptech.in,john.doe@reactdev.io
   
-  # Send using specific template (with matching alias)
-  python3 send_test_emails.py send --template freelance_opportunities --limit 5
+  # Preview first 3 (no emails sent)
+  python3 send_test_emails.py send --dry-run --limit 3
+  
+  # Send earning opportunity to US contacts only
+  python3 send_test_emails.py send --template earning_opportunity --country US
+  
+  # Test with 2 specific people before mass send
+  python3 send_test_emails.py send --template earning_opportunity \\
+    --emails alex.kumar@startuptech.in,priya.patel@techcorp.com --dry-run
 
-💡 How it works:
-  - Same email: matteopennacchia43@gmail.com
-  - Recipients see different sender names
-  - Great for A/B testing different campaign angles
-  - Perfect for advertising without multiple accounts
+💡 WORKFLOW:
+  1. Preview with --dry-run to see who will get it
+  2. Refine with filters (--country, --emails, --exclude)
+  3. Remove --dry-run to actually send
+  4. Check stats: python3 devnavigator.py stats
         """)
         return
     
@@ -435,20 +510,40 @@ Examples:
         show_templates()
     
     elif command == 'send':
-        limit = 3
+        limit = None
         template = None
         dry_run = False
+        emails = None
+        country = None
+        exclude_emails = None
         
         # Parse arguments
-        for i, arg in enumerate(sys.argv[2:]):
+        i = 2
+        while i < len(sys.argv):
+            arg = sys.argv[i]
+            
             if arg == '--dry-run':
                 dry_run = True
-            elif arg == '--limit' and i + 3 < len(sys.argv):
-                limit = int(sys.argv[i + 3])
-            elif arg == '--template' and i + 3 < len(sys.argv):
-                template = sys.argv[i + 3]
+            elif arg == '--limit' and i + 1 < len(sys.argv):
+                limit = int(sys.argv[i + 1])
+                i += 1
+            elif arg == '--template' and i + 1 < len(sys.argv):
+                template = sys.argv[i + 1]
+                i += 1
+            elif arg == '--emails' and i + 1 < len(sys.argv):
+                emails = [e.strip() for e in sys.argv[i + 1].split(',')]
+                i += 1
+            elif arg == '--country' and i + 1 < len(sys.argv):
+                country = sys.argv[i + 1].upper()
+                i += 1
+            elif arg == '--exclude' and i + 1 < len(sys.argv):
+                exclude_emails = [e.strip() for e in sys.argv[i + 1].split(',')]
+                i += 1
+            
+            i += 1
         
-        test_send_email(template_name=template, limit=limit, dry_run=dry_run)
+        test_send_email(template_name=template, limit=limit, dry_run=dry_run, 
+                       emails=emails, country=country, exclude_emails=exclude_emails)
     
     else:
         print(f"Unknown command: {command}")
