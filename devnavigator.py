@@ -89,12 +89,135 @@ def cmd_add_template(args):
 def cmd_stats(args):
     """Show campaign statistics"""
     manager = DatabaseManager()
+    summary = manager.get_queue_summary()
     
     print("\n📊 Campaign Statistics:")
     print("-" * 40)
-    print(f"Total contacts:    {manager.get_contact_count()}")
-    print(f"Ready to send:      {manager.get_unsent_count()}")
+    print(f"Total contacts:    {summary['total_contacts']}")
+    print(f"Ready to send:     {summary['ready_to_send']}")
+    print(f"Needs review:      {summary['needs_review']}")
+    print(f"Recently imported: {summary['recent_imports']}")
+    print(f"Sent:              {summary['sent_count']}")
+    print(f"Bounced:           {summary['bounced_count']}")
+    print(f"Unsubscribed:      {summary['unsubscribed_count']}")
+    print(f"Archived:          {summary['archived_count']}")
     print("-" * 40)
+
+
+def cmd_queue(args):
+    """Show the current send queue with filters."""
+    manager = DatabaseManager()
+    summary = manager.get_queue_summary(recent_hours=args.recent_hours)
+    contacts = manager.get_contacts(
+        queue=args.queue,
+        limit=args.limit,
+        source=args.source,
+        recent_hours=args.recent_hours,
+    )
+
+    print("\n📬 Send Queue Overview:")
+    print("-" * 72)
+    print(f"Total contacts:    {summary['total_contacts']}")
+    print(f"Ready to send:     {summary['ready_to_send']}")
+    print(f"Needs review:      {summary['needs_review']}")
+    print(f"Recently imported: {summary['recent_imports']} (last {args.recent_hours}h)")
+    print(f"Archived:          {summary['archived_count']}")
+    print("-" * 72)
+
+    if not contacts:
+        print("No contacts matched this view.")
+        return
+
+    print(f"\nShowing {len(contacts)} contact(s) from queue='{args.queue}':\n")
+    for contact in contacts:
+        source = contact['source'] or 'manual'
+        created = contact['created_at'] or 'N/A'
+        print(f"- {contact['email']}")
+        print(f"  Status: {contact['queue_status']} | Consent: {'Yes' if contact['consent'] else 'No'} | Source: {source}")
+        print(f"  Company: {contact['company'] or 'N/A'} | Country: {contact['country'] or 'N/A'} | Added: {created}")
+
+
+def cmd_archive_contacts(args):
+    """Archive contacts so they disappear from active queue views."""
+    manager = DatabaseManager()
+
+    if args.sent:
+        archived = manager.archive_contacts(sent_only=True)
+        label = "sent contacts"
+    elif args.all:
+        archived = manager.archive_contacts(all_active=True)
+        label = "active contacts"
+    elif args.emails:
+        emails = [email.strip() for email in args.emails.split(',') if email.strip()]
+        archived = manager.archive_contacts(emails=emails)
+        label = "selected contacts"
+    else:
+        print("❌ Choose one of: --sent, --all, or --emails")
+        return
+
+    summary = manager.get_queue_summary()
+    print(f"\n🗄️ Archived {archived} {label}.")
+    print(f"Active contacts: {summary['total_contacts']}")
+    print(f"Archived:        {summary['archived_count']}")
+
+
+def cmd_unarchive_contacts(args):
+    """Restore archived contacts back into active queue views."""
+    manager = DatabaseManager()
+
+    if args.all:
+        restored = manager.unarchive_contacts(all_archived=True)
+        label = "archived contacts"
+    elif args.emails:
+        emails = [email.strip() for email in args.emails.split(',') if email.strip()]
+        restored = manager.unarchive_contacts(emails=emails)
+        label = "selected contacts"
+    else:
+        print("❌ Choose one of: --all or --emails")
+        return
+
+    summary = manager.get_queue_summary()
+    print(f"\n📂 Restored {restored} {label}.")
+    print(f"Active contacts: {summary['total_contacts']}")
+    print(f"Archived:        {summary['archived_count']}")
+
+
+def cmd_approve_recent_contacts(args):
+    """Approve the newest review contacts so send-new can target them."""
+    manager = DatabaseManager()
+    approved = manager.approve_recent_contacts(limit=args.limit, recent_hours=args.recent_hours)
+    summary = manager.get_queue_summary(recent_hours=args.recent_hours or 24)
+
+    print(f"\n✅ Approved {approved} recent contact(s).")
+    print(f"Ready to send: {summary['ready_to_send']}")
+    print(f"Needs review:  {summary['needs_review']}")
+
+
+def cmd_import_contacts(args):
+    """Import a local leads file into the database."""
+    manager = DatabaseManager()
+    imported, duplicates, errors = manager.import_contacts_file(
+        file_path=args.file,
+        source=args.source,
+        consent=1 if args.consent else 0,
+    )
+
+    print(f"\n📥 Import results for: {args.file}")
+    print("-" * 40)
+    print(f"Imported:   {imported}")
+    print(f"Duplicates: {duplicates}")
+    print(f"Consent:    {'approved/sendable' if args.consent else 'review required'}")
+    if errors:
+        print(f"Errors:     {len(errors)}")
+        for error in errors[:10]:
+            print(f"  - {error}")
+        if len(errors) > 10:
+            print(f"  ... and {len(errors) - 10} more")
+
+    summary = manager.get_queue_summary()
+    print("\nUpdated queue:")
+    print(f"  Ready to send: {summary['ready_to_send']}")
+    print(f"  Needs review:  {summary['needs_review']}")
 
 
 def cmd_search_auto(args):
@@ -211,6 +334,34 @@ Examples:
     
     # Stats command
     subparsers.add_parser('stats', help='Show campaign statistics')
+
+    # Queue inspection command
+    queue_parser = subparsers.add_parser('queue', help='Inspect the current send queue')
+    queue_parser.add_argument('--queue', choices=['all', 'ready', 'review', 'recent', 'recent_ready', 'sent', 'archived'],
+                              default='all', help='Queue view to show')
+    queue_parser.add_argument('--limit', type=int, default=20, help='Maximum rows to display')
+    queue_parser.add_argument('--source', help='Filter by exact source value')
+    queue_parser.add_argument('--recent-hours', type=int, default=24, help='Window for recent queue filters')
+
+    # Contact import command
+    import_parser = subparsers.add_parser('import-contacts', help='Import contacts from a local CSV/text file')
+    import_parser.add_argument('--file', required=True, help='Path to CSV or text file')
+    import_parser.add_argument('--source', default='csv_upload', help='Source label stored in the database')
+    import_parser.add_argument('--consent', action='store_true',
+                               help='Mark imported contacts as approved/sendable')
+
+    archive_parser = subparsers.add_parser('archive-contacts', help='Archive contacts from active queue views')
+    archive_parser.add_argument('--sent', action='store_true', help='Archive all sent contacts')
+    archive_parser.add_argument('--all', action='store_true', help='Archive all active contacts')
+    archive_parser.add_argument('--emails', help='Comma-separated emails to archive')
+
+    unarchive_parser = subparsers.add_parser('unarchive-contacts', help='Restore archived contacts')
+    unarchive_parser.add_argument('--all', action='store_true', help='Restore all archived contacts')
+    unarchive_parser.add_argument('--emails', help='Comma-separated emails to restore')
+
+    approve_parser = subparsers.add_parser('approve-recent-contacts', help='Approve newest review contacts')
+    approve_parser.add_argument('--limit', type=int, default=20, help='Number of recent contacts to approve')
+    approve_parser.add_argument('--recent-hours', type=int, help='Only approve contacts added within this many hours')
     
     # Search auto command
     search_auto_parser = subparsers.add_parser('search-auto', help='Search and extract emails with criteria')
@@ -243,6 +394,16 @@ Examples:
         cmd_add_template(args)
     elif args.command == 'stats':
         cmd_stats(args)
+    elif args.command == 'queue':
+        cmd_queue(args)
+    elif args.command == 'import-contacts':
+        cmd_import_contacts(args)
+    elif args.command == 'archive-contacts':
+        cmd_archive_contacts(args)
+    elif args.command == 'unarchive-contacts':
+        cmd_unarchive_contacts(args)
+    elif args.command == 'approve-recent-contacts':
+        cmd_approve_recent_contacts(args)
     elif args.command == 'search-auto':
         cmd_search_auto(args)
     elif args.command == 'search-filtered':

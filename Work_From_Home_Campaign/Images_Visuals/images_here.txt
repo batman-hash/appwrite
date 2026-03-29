@@ -1,0 +1,20 @@
+Add up to 3 campaign visuals in this folder and they will be embedded automatically
+in the HTML version of `earning_opportunity` emails.
+
+Recommended filenames:
+- hero_work_setup.png
+  man at PC / keyboard / logo-style main image
+- money_bag.png
+  money sack / earning visual
+- beach_lifestyle.png
+  person sitting on the beach with laptop
+
+Supported formats:
+- .png
+- .jpg
+- .jpeg
+- .gif
+- .webp
+
+Preview before sending:
+python3 send_test_emails.py preview --template earning_opportunity --email matteopennacchia43@gmail.com

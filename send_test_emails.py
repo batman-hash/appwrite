@@ -7,12 +7,20 @@ import os
 import sys
 import sqlite3
 import smtplib
+import html
+import mimetypes
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.mime.image import MIMEImage
 from dotenv import load_dotenv
 from datetime import datetime
+from string import Template
+from pathlib import Path
+from urllib.parse import urlparse
 
 load_dotenv()
+
+from python_engine.database_manager import DatabaseManager
 
 # Import tracking system
 try:
@@ -24,6 +32,7 @@ except:
 
 # Email aliases for different campaign types (same email, different display names)
 EMAIL_ALIASES = {
+    'default_campaign': 'DevNavigator Team',
     'junior_dev_recruitment': 'DevNavigator Jobs 🚀',
     'freelance_opportunities': 'DevNavigator Projects 💼',
     'marketing_partnership': 'DevNavigator Partnerships 🤝',
@@ -31,12 +40,246 @@ EMAIL_ALIASES = {
     'earning_opportunity': 'Earning Opportunity Network 💰',
 }
 
+SENDABLE_WHERE = "archived = 0 AND sent = 0 AND consent = 1 AND bounced = 0 AND unsubscribed = 0"
+
+CAMPAIGN_LINK_ENV_VARS = {
+    'default_campaign': 'DEFAULT_CAMPAIGN_REGISTER_LINK',
+    'junior_dev_recruitment': 'JUNIOR_DEV_RECRUITMENT_REGISTER_LINK',
+    'freelance_opportunities': 'FREELANCE_OPPORTUNITIES_REGISTER_LINK',
+    'marketing_partnership': 'MARKETING_PARTNERSHIP_REGISTER_LINK',
+    'learning_program': 'LEARNING_PROGRAM_REGISTER_LINK',
+    'earning_opportunity': 'EARNING_OPPORTUNITY_REGISTER_LINK',
+}
+
+CAMPAIGN_LINK_DEFAULTS = {
+    'default_campaign': 'https://devnavigator.io',
+    'junior_dev_recruitment': 'https://devnavigator.io',
+    'freelance_opportunities': 'https://projects.devnavigator.io',
+    'marketing_partnership': '',
+    'learning_program': 'https://bootcamp.devnavigator.io',
+    'earning_opportunity': 'https://www.freelancer.com/u/matteo272?frm=matteo272&sb=t',
+}
+
+CAMPAIGN_IMAGE_DIRS = {
+    'earning_opportunity': Path('Work_From_Home_Campaign/Images_Visuals'),
+}
+
+PREFERRED_IMAGE_FILES = [
+    'hero_work_setup',
+    'money_bag',
+    'beach_lifestyle',
+]
+
+
+def get_campaign_register_link(template_name=None):
+    """Resolve the campaign-specific registration link from environment."""
+    if template_name:
+        env_var = CAMPAIGN_LINK_ENV_VARS.get(template_name)
+        if env_var:
+            value = os.getenv(env_var, '').strip()
+            if value:
+                return value
+        fallback = CAMPAIGN_LINK_DEFAULTS.get(template_name, '').strip()
+        if fallback:
+            return fallback
+    return os.getenv('DEFAULT_REGISTER_LINK', '').strip()
+
+
+def should_use_public_tracking(tracking_server_url):
+    """Only use tracking when the server URL is publicly reachable."""
+    if not tracking_server_url:
+        return False
+
+    try:
+        parsed = urlparse(tracking_server_url)
+    except Exception:
+        return False
+
+    hostname = (parsed.hostname or '').lower()
+    if not hostname:
+        return False
+
+    local_hosts = {'localhost', '127.0.0.1', '::1'}
+    if hostname in local_hosts or hostname.endswith('.local'):
+        return False
+
+    return True
+
+
+def get_campaign_visuals(template_name=None):
+    """Return local campaign image files to embed in HTML emails."""
+    image_dir = CAMPAIGN_IMAGE_DIRS.get(template_name)
+    if not image_dir:
+        return []
+
+    if not image_dir.exists():
+        return []
+
+    allowed_suffixes = {'.png', '.jpg', '.jpeg', '.gif', '.webp'}
+    files = [path for path in image_dir.iterdir() if path.is_file() and path.suffix.lower() in allowed_suffixes]
+    if not files:
+        return []
+
+    preferred = []
+    seen = set()
+    for stem in PREFERRED_IMAGE_FILES:
+        for path in files:
+            if path.stem.lower() == stem and path not in seen:
+                preferred.append(path)
+                seen.add(path)
+                break
+
+    for path in sorted(files):
+        if path not in seen:
+            preferred.append(path)
+            seen.add(path)
+
+    return preferred[:3]
+
+
+def format_text_as_html_paragraphs(rendered_body):
+    """Convert plain text email content into simple HTML paragraphs."""
+    sections = []
+    for paragraph in rendered_body.split('\n\n'):
+        escaped = html.escape(paragraph).replace('\n', '<br>')
+        if escaped.strip():
+            sections.append(
+                f'<p style="margin:0 0 16px 0;font-size:16px;line-height:1.7;color:#1f2937;">{escaped}</p>'
+            )
+    return ''.join(sections)
+
+
+def build_html_email(rendered_body, image_count=0, template_name=None, register_link=''):
+    """Convert the rendered message into email-safe HTML."""
+    image_blocks = [
+        (
+            f'<img src="cid:campaign_image_{index}" '
+            f'style="display:block;width:100%;height:auto;border:0;border-radius:16px;" '
+            f'alt="Campaign visual {index + 1}">'
+        )
+        for index in range(image_count)
+    ]
+    body_html = format_text_as_html_paragraphs(rendered_body)
+
+    if template_name == 'earning_opportunity':
+        hero_image = image_blocks[0] if image_blocks else ''
+        extra_images = image_blocks[1:]
+
+        extra_image_rows = ''
+        if extra_images:
+            cells = []
+            for image_html in extra_images:
+                cells.append(
+                    '<td style="padding:8px;vertical-align:top;">'
+                    f'{image_html}'
+                    '</td>'
+                )
+            if len(cells) == 1:
+                cells.append('<td style="padding:8px;vertical-align:top;"></td>')
+            extra_image_rows = (
+                '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" '
+                'style="margin-top:8px;border-collapse:collapse;"><tr>'
+                + ''.join(cells[:2]) +
+                '</tr></table>'
+            )
+
+        cta_html = ''
+        if register_link:
+            safe_link = html.escape(register_link, quote=True)
+            cta_html = (
+                '<div style="margin:24px 0 18px 0;text-align:center;">'
+                f'<a href="{safe_link}" '
+                'style="display:inline-block;background:#00c853;color:#ffffff;text-decoration:none;'
+                'font-size:16px;font-weight:bold;padding:14px 28px;border-radius:999px;">'
+                'Get Started'
+                '</a>'
+                '</div>'
+            )
+
+        return (
+            '<html><body style="margin:0;padding:0;background:#eef2f7;font-family:Arial,sans-serif;">'
+            '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" '
+            'style="background:#eef2f7;padding:24px 0;">'
+            '<tr><td align="center">'
+            '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" '
+            'style="max-width:680px;background:#ffffff;border-radius:24px;overflow:hidden;">'
+            '<tr><td style="background:#0f172a;padding:40px 32px 28px 32px;text-align:center;">'
+            '<div style="font-size:34px;line-height:1.15;font-weight:bold;color:#ffffff;">'
+            'Start Earning From Home'
+            '</div>'
+            '<div style="margin-top:12px;font-size:18px;line-height:1.5;color:#cbd5e1;">'
+            '100% Free Opportunity'
+            '</div>'
+            f'{cta_html}'
+            '</td></tr>'
+            + (
+                '<tr><td style="padding:24px 24px 8px 24px;">'
+                f'{hero_image}'
+                '</td></tr>'
+                if hero_image else ''
+            ) +
+            '<tr><td style="padding:24px 32px 32px 32px;">'
+            f'{body_html}'
+            f'{extra_image_rows}'
+            '</td></tr>'
+            '</table>'
+            '</td></tr></table>'
+            '</body></html>'
+        )
+
+    image_html = ''.join(
+        f'<div style="margin:16px 0;">{block}</div>'
+        for block in image_blocks
+    )
+
+    return (
+        '<html><body style="font-family:Arial,sans-serif;line-height:1.6;color:#1f2937;">'
+        f'{body_html}'
+        f'{image_html}'
+        '</body></html>'
+    )
+
+
+def render_email_content(to_email, subject, body, template_name=None, recipient_name=None,
+                         add_tracking=True):
+    """Render a message with variables and optional tracked registration link."""
+    register_link = get_campaign_register_link(template_name)
+    context = {
+        'name': recipient_name or 'there',
+        'email': to_email,
+        'date': datetime.now().strftime('%Y-%m-%d'),
+        'register_link': register_link or '[SET REGISTER LINK]',
+    }
+
+    rendered_subject = Template(subject).safe_substitute(context)
+    rendered_body = Template(body).safe_substitute(context)
+
+    # Backward-compatible replacements for older templates using {var} syntax.
+    for key, value in context.items():
+        rendered_subject = rendered_subject.replace(f'{{{key}}}', value)
+        rendered_body = rendered_body.replace(f'{{{key}}}', value)
+
+    if add_tracking and HAS_TRACKING and register_link:
+        tracker = EmailTracker()
+        if should_use_public_tracking(tracker.tracking_server_url):
+            tracked_link = tracker.get_tracking_link(
+                register_link,
+                to_email,
+                f"{template_name or 'campaign'}_register",
+            )
+            rendered_body = rendered_body.replace(register_link, tracked_link)
+            tracking_pixel = tracker.get_tracking_pixel(to_email)
+            rendered_body = rendered_body + f"\n\n{tracking_pixel}"
+
+    return rendered_subject, rendered_body
+
 
 class EmailTemplateManager:
     """Create and manage email templates"""
     
     def __init__(self, db_path=None):
         self.db_path = db_path or os.getenv('DATABASE_PATH', './database/devnav.db')
+        DatabaseManager(self.db_path)
     
     def add_template(self, name, subject, body, is_default=False):
         """Add email template to database"""
@@ -44,6 +287,8 @@ class EmailTemplateManager:
         cursor = conn.cursor()
         
         try:
+            if is_default:
+                cursor.execute("UPDATE email_templates SET is_default = 0")
             cursor.execute("""
                 INSERT OR REPLACE INTO email_templates (name, subject, body, is_default)
                 VALUES (?, ?, ?, ?)
@@ -57,14 +302,61 @@ class EmailTemplateManager:
         finally:
             conn.close()
     
-    def get_template(self, name):
-        """Get template by name"""
+    def get_template(self, name=None):
+        """Get template by name, or return the default template when omitted."""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
-        cursor.execute("SELECT subject, body FROM email_templates WHERE name = ?", (name,))
+        if name:
+            cursor.execute("SELECT subject, body FROM email_templates WHERE name = ?", (name,))
+        else:
+            cursor.execute("""
+                SELECT subject, body
+                FROM email_templates
+                WHERE is_default = 1
+                ORDER BY id ASC
+                LIMIT 1
+            """)
         result = cursor.fetchone()
         conn.close()
         return result if result else (None, None)
+
+    def get_default_template_name(self):
+        """Return the current default template name."""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT name
+            FROM email_templates
+            WHERE is_default = 1
+            ORDER BY id ASC
+            LIMIT 1
+        """)
+        result = cursor.fetchone()
+        conn.close()
+        return result[0] if result else None
+
+    def preview_template(self, name=None, to_email='preview@example.com', recipient_name='there'):
+        """Return a rendered preview of a template."""
+        template_name = name or self.get_default_template_name()
+        subject, body = self.get_template(template_name)
+        if not subject or not body:
+            return None
+        visuals = get_campaign_visuals(template_name)
+        rendered_subject, rendered_body = render_email_content(
+            to_email=to_email,
+            subject=subject,
+            body=body,
+            template_name=template_name,
+            recipient_name=recipient_name,
+            add_tracking=False,
+        )
+        return {
+            'name': template_name,
+            'subject': rendered_subject,
+            'body': rendered_body,
+            'register_link': get_campaign_register_link(template_name),
+            'visuals': [str(path) for path in visuals],
+        }
 
 
 class EmailSender:
@@ -93,6 +385,7 @@ class EmailSender:
         self.from_email = os.getenv('SMTP_FROM', self.username)
         self.use_tls = os.getenv('SMTP_USE_TLS', 'true').lower() == 'true'
         self.db_path = os.getenv('DATABASE_PATH', './database/devnav.db')
+        DatabaseManager(self.db_path)
     
     def send_test_email(self, to_email, subject, body, template_name=None, from_name=None):
         """
@@ -102,29 +395,24 @@ class EmailSender:
         Returns: (success: bool, message: str)
         """
         try:
-            # Replace variables
-            body = body.replace('$email', to_email)
-            body = body.replace('$date', datetime.now().strftime('%Y-%m-%d'))
-            
-            # Add tracking if available
-            if HAS_TRACKING:
-                tracker = EmailTracker()
-                
-                # Wrap Freelancer link with tracking
-                if 'https://www.freelancer.com' in body:
-                    tracking_link = tracker.get_tracking_link(
-                        'https://www.freelancer.com/get/matteo272?f=give',
-                        to_email,
-                        'freelancer_signup'
-                    )
-                    body = body.replace('https://www.freelancer.com/get/matteo272?f=give', tracking_link)
-                
-                # Add open tracking pixel (invisible 1x1 image)
-                tracking_pixel = tracker.get_tracking_pixel(to_email)
-                body = body + f"\n\n{tracking_pixel}"
+            subject, body = render_email_content(
+                to_email=to_email,
+                subject=subject,
+                body=body,
+                template_name=template_name,
+                add_tracking=True,
+            )
+            visuals = get_campaign_visuals(template_name)
+            html_body = build_html_email(
+                body,
+                image_count=len(visuals),
+                template_name=template_name,
+                register_link=get_campaign_register_link(template_name),
+            )
             
             # Create message
-            msg = MIMEMultipart('alternative')
+            msg = MIMEMultipart('related')
+            alternative = MIMEMultipart('alternative')
             msg['Subject'] = subject
             
             # Set From with display name (email alias effect)
@@ -135,8 +423,20 @@ class EmailSender:
             
             msg['To'] = to_email
             
-            # Add body
-            msg.attach(MIMEText(body, 'plain'))
+            alternative.attach(MIMEText(body, 'plain'))
+            alternative.attach(MIMEText(html_body, 'html'))
+            msg.attach(alternative)
+
+            for index, image_path in enumerate(visuals):
+                mime_type, _ = mimetypes.guess_type(str(image_path))
+                if not mime_type or not mime_type.startswith('image/'):
+                    continue
+
+                with open(image_path, 'rb') as handle:
+                    image_part = MIMEImage(handle.read())
+                image_part.add_header('Content-ID', f'<campaign_image_{index}>')
+                image_part.add_header('Content-Disposition', 'inline', filename=image_path.name)
+                msg.attach(image_part)
             
             # Send
             with smtplib.SMTP(self.smtp_server, self.port) as server:
@@ -181,8 +481,9 @@ class EmailSender:
         finally:
             conn.close()
     
-    def send_batch(self, subject, body, limit=None, dry_run=False, from_name=None, 
-                   emails=None, country=None, exclude_emails=None):
+    def send_batch(self, subject, body, limit=None, dry_run=False, from_name=None,
+                   emails=None, country=None, exclude_emails=None, template_name=None,
+                   recent_hours=None):
         """
         Send emails to selected contacts with optional filtering
         Args:
@@ -196,20 +497,29 @@ class EmailSender:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
             
-            # Build query based on filters
+            conditions = [SENDABLE_WHERE]
+            params = []
+
             if emails:
-                # Send to specific emails only
                 placeholders = ','.join(['?' for _ in emails])
-                query = f"SELECT email FROM contacts WHERE email IN ({placeholders}) AND sent = 0"
-                cursor.execute(query, emails)
-            elif country:
-                # Send to specific country
-                query = "SELECT email FROM contacts WHERE country = ? AND sent = 0"
-                cursor.execute(query, (country,))
-            else:
-                # Get all unsent contacts
-                query = "SELECT email FROM contacts WHERE sent = 0"
-                cursor.execute(query)
+                conditions.append(f"email IN ({placeholders})")
+                params.extend(emails)
+
+            if country:
+                conditions.append("country = ?")
+                params.append(country)
+
+            if recent_hours is not None:
+                conditions.append("datetime(created_at) > datetime('now', '-' || ? || ' hours')")
+                params.append(recent_hours)
+
+            query = f"""
+                SELECT email
+                FROM contacts
+                WHERE {' AND '.join(conditions)}
+                ORDER BY datetime(created_at) DESC, email ASC
+            """
+            cursor.execute(query, params)
             
             contacts = list(cursor.fetchall())
             
@@ -232,8 +542,13 @@ class EmailSender:
                 print(f"🎯 Specific emails selected")
             if country:
                 print(f"🌍 Country filter: {country}")
+            if recent_hours is not None:
+                print(f"🕒 New contacts only: last {recent_hours} hour(s)")
             if exclude_emails:
                 print(f"🚫 Excluding: {len(exclude_emails)} emails")
+            if not contacts:
+                print("ℹ️  No contacts matched the approved send queue.")
+                print("    Only contacts with consent=1 and without sent/bounced/unsubscribed flags are eligible.")
             print("=" * 60)
             
             for i, (email,) in enumerate(contacts, 1):
@@ -242,7 +557,13 @@ class EmailSender:
                     print(f"{i}. [DRY RUN] Would send to: {email}{sender_display}")
                     sent += 1
                 else:
-                    success, msg = self.send_test_email(email, subject, body, from_name=from_name)
+                    success, msg = self.send_test_email(
+                        email,
+                        subject,
+                        body,
+                        template_name=template_name,
+                        from_name=from_name,
+                    )
                     status = "✓" if success else "✗"
                     print(f"{i}. {status} {email}: {msg}")
                     
@@ -293,7 +614,7 @@ https://devnavigator.io
 This is a test email. Your email: $email
 Sent: $date
 ''',
-        'is_default': True
+        'is_default': False
     }
     manager.add_template(**template1)
     
@@ -315,7 +636,7 @@ Your expertise in $category makes you a great fit!
 
 Interested? Let's discuss the details!
 
-Reply to this email or visit: https://projects.devnavigator.io
+Reply to this email or register here: $register_link
 
 Cheers,
 DevNavigator Crew
@@ -368,7 +689,7 @@ Program Highlights:
 
 Early applicants get 50% discount!
 
-Learn more: https://bootcamp.devnavigator.io
+Learn more and register: $register_link
 
 Enroll now!
 
@@ -382,21 +703,24 @@ $date
     # Template 5: Earning Opportunity Network
     template5 = {
         'name': 'earning_opportunity',
-        'subject': 'Start Earning From Home - No Hidden Costs! 💰',
+        'subject': 'Free Registration: Flexible Online Earning Opportunity 💰',
         'body': '''Hi,
 
-I hope you're having a great day!
+I wanted to share a simple way to get started with our current earning opportunity campaign.
 
-We're currently building a growing network of people who want to start earning money from home — and the best part is, it's completely free to get started.
+This is focused on people who want flexible online work they can manage from home and explore at their own pace.
 
-No hidden costs. No upfront payments. Just an opportunity to learn, connect, and start earning online at your own pace.
+If you want to register and see the details, use this link:
+$register_link
 
-If you're interested and want to see how it works, check out the link below:
-👉 https://www.freelancer.com/get/matteo272?f=give
+What happens next:
+- you create your account
+- you review the available opportunity
+- you decide if it is a good fit for you
 
-Feel free to share this with anyone who wants to start earning from home.
+There is no pressure to continue if it is not right for you.
 
-Let me know if you have any questions — happy to help!
+If you want more information before registering, just reply to this email and I will help.
 
 Best regards,
 Matteo
@@ -405,7 +729,7 @@ Earning Opportunity Network
 ---
 Email: $email | Date: $date
 ''',
-        'is_default': False
+        'is_default': True
     }
     manager.add_template(**template5)
     
@@ -418,7 +742,11 @@ def show_templates():
         conn = sqlite3.connect(os.getenv('DATABASE_PATH', './database/devnav.db'))
         cursor = conn.cursor()
         
-        cursor.execute("SELECT name, subject, is_default FROM email_templates")
+        cursor.execute("""
+            SELECT name, subject, is_default
+            FROM email_templates
+            ORDER BY is_default DESC, name ASC
+        """)
         templates = cursor.fetchall()
         conn.close()
         
@@ -435,17 +763,22 @@ def show_templates():
         print(f"Error: {e}")
 
 
-def test_send_email(template_name=None, limit=3, dry_run=False, emails=None, country=None, exclude_emails=None):
+def test_send_email(template_name=None, limit=3, dry_run=False, emails=None, country=None,
+                    exclude_emails=None, recent_hours=None):
     """Send test emails to selected contacts with optional filtering"""
     
     print("\n╔════════════════════════════════════════════════════════════╗")
     print("║           📧 TEST EMAIL SENDING                           ║")
     print("╚════════════════════════════════════════════════════════════╝")
     
-    if not template_name:
-        template_name = 'junior_dev_recruitment'
-    
     manager = EmailTemplateManager()
+    if not template_name:
+        template_name = manager.get_default_template_name()
+
+    if not template_name:
+        print("✗ No default template is configured.")
+        return
+
     subject, body = manager.get_template(template_name)
     
     if not subject or not body:
@@ -456,12 +789,35 @@ def test_send_email(template_name=None, limit=3, dry_run=False, emails=None, cou
     # Get email alias for this template
     from_name = EMAIL_ALIASES.get(template_name, 'DevNavigator Team')
     
+    preview = manager.preview_template(
+        name=template_name,
+        to_email=(emails[0] if emails else 'preview@example.com'),
+    )
+
     print(f"\n📧 Using template: {template_name}")
     print(f"   Subject: {subject}")
     print(f"   📛 Sender name: {from_name}")
+    print(f"   🔗 Register link: {preview['register_link'] or 'not set'}")
+    print(f"   🖼️  Visuals attached: {len(preview['visuals'])}")
+    if recent_hours is not None:
+        print(f"   🕒 New contacts only: last {recent_hours} hour(s)")
     print(f"   Limit: {limit} emails")
     print(f"   Dry run: {'Yes (no emails sent)' if dry_run else 'No (emails will be sent)'}")
-    
+
+    print("\n📝 Rendered preview:")
+    print("-" * 60)
+    print(f"Subject: {preview['subject']}")
+    print()
+    print(preview['body'][:900])
+    if len(preview['body']) > 900:
+        print("\n... preview truncated ...")
+    print("-" * 60)
+    if preview['visuals']:
+        print("Visual files:")
+        for image_path in preview['visuals']:
+            print(f"  - {image_path}")
+        print("-" * 60)
+
     if dry_run:
         print("\n⚠️  DRY RUN MODE - Showing what would be sent:\n")
     else:
@@ -472,15 +828,43 @@ def test_send_email(template_name=None, limit=3, dry_run=False, emails=None, cou
         print()
     
     sender = EmailSender()
-    sent, failed = sender.send_batch(subject, body, limit=limit, dry_run=dry_run, 
-                                     from_name=from_name, emails=emails, 
-                                     country=country, exclude_emails=exclude_emails)
+    sent, failed = sender.send_batch(subject, body, limit=limit, dry_run=dry_run,
+                                     from_name=from_name, emails=emails,
+                                     country=country, exclude_emails=exclude_emails,
+                                     template_name=template_name, recent_hours=recent_hours)
     
     print(f"\n✅ Complete!")
     if not dry_run:
         print(f"   Sent: {sent}")
         print(f"   Failed: {failed}")
         print(f"   Status saved to database")
+
+
+def preview_template(template_name=None, to_email='preview@example.com'):
+    """Print the rendered template without sending."""
+    manager = EmailTemplateManager()
+    template = manager.preview_template(name=template_name, to_email=to_email)
+
+    if not template:
+        requested = template_name or 'default template'
+        print(f"✗ Could not load {requested}")
+        return
+
+    print("\n╔════════════════════════════════════════════════════════════╗")
+    print("║                📝 TEMPLATE PREVIEW                        ║")
+    print("╚════════════════════════════════════════════════════════════╝")
+    print(f"\nTemplate: {template['name']}")
+    print(f"Register link: {template['register_link'] or 'not set'}")
+    print(f"Visuals attached: {len(template['visuals'])}")
+    print("-" * 60)
+    print(f"Subject: {template['subject']}")
+    print()
+    print(template['body'])
+    if template['visuals']:
+        print("\nVisual files:")
+        for image_path in template['visuals']:
+            print(f"  - {image_path}")
+    print("-" * 60)
 
 
 def main():
@@ -492,7 +876,9 @@ def main():
 Usage:
   python3 send_test_emails.py setup              # Create templates
   python3 send_test_emails.py list               # Show templates
+  python3 send_test_emails.py preview [OPTIONS]  # Preview rendered template
   python3 send_test_emails.py send [OPTIONS]     # Send test emails
+  python3 send_test_emails.py send-new [OPTIONS] # Send only recent approved contacts
 
 🎯 FILTERING OPTIONS:
   --limit N                    # Send to N contacts max
@@ -501,6 +887,8 @@ Usage:
   --exclude email1,email2,... # Exclude specific emails
   --dry-run                   # Preview without sending
   --template NAME             # Use specific template
+  --email ADDRESS             # Preview template using a sample recipient
+  --recent-hours N            # Only use approved contacts added in last N hours
 
 📛 EMAIL ALIASES (Different sender names, same email):
   - junior_dev_recruitment  → "DevNavigator Jobs 🚀"
@@ -510,7 +898,7 @@ Usage:
   - earning_opportunity     → "Earning Opportunity Network 💰"
 
 EXAMPLES:
-  # Send to all (default)
+  # Send to all using the current default template
   python3 send_test_emails.py send --limit 10
   
   # Send to specific emails only
@@ -527,6 +915,12 @@ EXAMPLES:
   
   # Send earning opportunity to US contacts only
   python3 send_test_emails.py send --template earning_opportunity --country US
+
+  # Preview the actual email before sending
+  python3 send_test_emails.py preview --template earning_opportunity --email demo@example.com
+
+  # Auto-send only approved new contacts from the last 24 hours
+  python3 send_test_emails.py send-new --dry-run
   
   # Test with 2 specific people before mass send
   python3 send_test_emails.py send --template earning_opportunity \\
@@ -547,14 +941,34 @@ EXAMPLES:
     
     elif command == 'list':
         show_templates()
-    
-    elif command == 'send':
+
+    elif command == 'preview':
+        template = None
+        to_email = 'preview@example.com'
+
+        i = 2
+        while i < len(sys.argv):
+            arg = sys.argv[i]
+
+            if arg == '--template' and i + 1 < len(sys.argv):
+                template = sys.argv[i + 1]
+                i += 1
+            elif arg == '--email' and i + 1 < len(sys.argv):
+                to_email = sys.argv[i + 1]
+                i += 1
+
+            i += 1
+
+        preview_template(template_name=template, to_email=to_email)
+
+    elif command in ('send', 'send-new'):
         limit = None
         template = None
         dry_run = False
         emails = None
         country = None
         exclude_emails = None
+        recent_hours = 24 if command == 'send-new' else None
         
         # Parse arguments
         i = 2
@@ -578,11 +992,15 @@ EXAMPLES:
             elif arg == '--exclude' and i + 1 < len(sys.argv):
                 exclude_emails = [e.strip() for e in sys.argv[i + 1].split(',')]
                 i += 1
+            elif arg == '--recent-hours' and i + 1 < len(sys.argv):
+                recent_hours = int(sys.argv[i + 1])
+                i += 1
             
             i += 1
         
-        test_send_email(template_name=template, limit=limit, dry_run=dry_run, 
-                       emails=emails, country=country, exclude_emails=exclude_emails)
+        test_send_email(template_name=template, limit=limit, dry_run=dry_run,
+                       emails=emails, country=country, exclude_emails=exclude_emails,
+                       recent_hours=recent_hours)
     
     else:
         print(f"Unknown command: {command}")

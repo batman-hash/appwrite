@@ -1,0 +1,25 @@
+Subject: Free Registration For Our Flexible Earning Opportunity
+
+Hi,
+
+I wanted to share a simple way to get started with our current earning opportunity campaign.
+
+This is for people who want to explore flexible online work they can manage from home and review at their own pace.
+
+If you want to register and see the details, use this link:
+$register_link
+
+What happens next:
+- you create your account
+- you review the opportunity details
+- you decide if it is a good fit for you
+
+If you want more information before registering, just reply to this email and I will help.
+
+Best regards,
+Matteo
+Earning Opportunity Network
+
+---
+Email: $email
+Date: $date
