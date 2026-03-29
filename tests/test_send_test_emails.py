@@ -62,6 +62,26 @@ def test_render_email_skips_localhost_tracking(monkeypatch):
     assert "<img" not in body
 
 
+def test_render_email_supports_verification_context():
+    subject, body = render_email_content(
+        to_email="person@example.com",
+        subject="Verify $email",
+        body="Use $verification_code or click $verification_link before $verification_expires_at",
+        template_name="email_verification",
+        add_tracking=False,
+        extra_context={
+            "verification_code": "123456",
+            "verification_link": "https://example.com/verify?token=abc",
+            "verification_expires_at": "2026-04-01 10:00:00 UTC",
+        },
+    )
+
+    assert subject == "Verify person@example.com"
+    assert "123456" in body
+    assert "https://example.com/verify?token=abc" in body
+    assert "2026-04-01 10:00:00 UTC" in body
+
+
 def test_get_campaign_visuals_prefers_named_files(tmp_path, monkeypatch):
     image_dir = tmp_path / "visuals"
     image_dir.mkdir()
@@ -103,6 +123,18 @@ def test_earning_opportunity_html_has_cta_and_hero():
     assert "cid:campaign_image_0" in html
     assert "cid:campaign_image_1" in html
     assert "cid:campaign_image_2" in html
+
+
+def test_email_verification_html_has_verify_cta():
+    html = build_html_email(
+        "Confirm your email",
+        template_name="email_verification",
+        verification_link="https://example.com/verify?token=abc",
+    )
+
+    assert "Confirm Your Email" in html
+    assert "Verify Email" in html
+    assert "https://example.com/verify?token=abc" in html
 
 
 def test_send_batch_recent_hours_only_targets_new_approved_contacts(tmp_path, monkeypatch):

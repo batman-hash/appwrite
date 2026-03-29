@@ -38,6 +38,7 @@ EMAIL_ALIASES = {
     'marketing_partnership': 'DevNavigator Partnerships 🤝',
     'learning_program': 'DevNavigator Academy 🎓',
     'earning_opportunity': 'Earning Opportunity Network 💰',
+    'email_verification': 'DevNavigator Verification',
 }
 
 SENDABLE_WHERE = "archived = 0 AND sent = 0 AND consent = 1 AND bounced = 0 AND unsubscribed = 0"
@@ -149,7 +150,7 @@ def format_text_as_html_paragraphs(rendered_body):
     return ''.join(sections)
 
 
-def build_html_email(rendered_body, image_count=0, template_name=None, register_link=''):
+def build_html_email(rendered_body, image_count=0, template_name=None, register_link='', verification_link=''):
     """Convert the rendered message into email-safe HTML."""
     image_blocks = [
         (
@@ -160,6 +161,44 @@ def build_html_email(rendered_body, image_count=0, template_name=None, register_
         for index in range(image_count)
     ]
     body_html = format_text_as_html_paragraphs(rendered_body)
+
+    if template_name == 'email_verification':
+        cta_html = ''
+        if verification_link and verification_link != '[SET EMAIL_VERIFICATION_BASE_URL]':
+            safe_link = html.escape(verification_link, quote=True)
+            cta_html = (
+                '<div style="margin:28px 0 20px 0;text-align:center;">'
+                f'<a href="{safe_link}" '
+                'style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;'
+                'font-size:16px;font-weight:600;padding:14px 28px;border-radius:999px;">'
+                'Verify Email'
+                '</a>'
+                '</div>'
+            )
+
+        return (
+            '<html><body style="margin:0;padding:0;background:#f4f7fb;font-family:Arial,sans-serif;">'
+            '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" '
+            'style="background:#f4f7fb;padding:24px 0;">'
+            '<tr><td align="center">'
+            '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" '
+            'style="max-width:640px;background:#ffffff;border-radius:20px;overflow:hidden;">'
+            '<tr><td style="background:#111827;padding:32px;text-align:center;">'
+            '<div style="font-size:28px;line-height:1.2;font-weight:700;color:#ffffff;">'
+            'Confirm Your Email'
+            '</div>'
+            '<div style="margin-top:10px;font-size:16px;line-height:1.5;color:#d1d5db;">'
+            'One quick step to verify your address for DevNavigator.'
+            '</div>'
+            f'{cta_html}'
+            '</td></tr>'
+            '<tr><td style="padding:32px;">'
+            f'{body_html}'
+            '</td></tr>'
+            '</table>'
+            '</td></tr></table>'
+            '</body></html>'
+        )
 
     if template_name == 'earning_opportunity':
         hero_image = image_blocks[0] if image_blocks else ''
@@ -241,7 +280,7 @@ def build_html_email(rendered_body, image_count=0, template_name=None, register_
 
 
 def render_email_content(to_email, subject, body, template_name=None, recipient_name=None,
-                         add_tracking=True):
+                         add_tracking=True, extra_context=None):
     """Render a message with variables and optional tracked registration link."""
     register_link = get_campaign_register_link(template_name)
     context = {
@@ -250,6 +289,8 @@ def render_email_content(to_email, subject, body, template_name=None, recipient_
         'date': datetime.now().strftime('%Y-%m-%d'),
         'register_link': register_link or '[SET REGISTER LINK]',
     }
+    if extra_context:
+        context.update({key: str(value) for key, value in extra_context.items() if value is not None})
 
     rendered_subject = Template(subject).safe_substitute(context)
     rendered_body = Template(body).safe_substitute(context)
@@ -335,7 +376,8 @@ class EmailTemplateManager:
         conn.close()
         return result[0] if result else None
 
-    def preview_template(self, name=None, to_email='preview@example.com', recipient_name='there'):
+    def preview_template(self, name=None, to_email='preview@example.com', recipient_name='there',
+                         extra_context=None):
         """Return a rendered preview of a template."""
         template_name = name or self.get_default_template_name()
         subject, body = self.get_template(template_name)
@@ -349,12 +391,14 @@ class EmailTemplateManager:
             template_name=template_name,
             recipient_name=recipient_name,
             add_tracking=False,
+            extra_context=extra_context,
         )
         return {
             'name': template_name,
             'subject': rendered_subject,
             'body': rendered_body,
             'register_link': get_campaign_register_link(template_name),
+            'verification_link': (extra_context or {}).get('verification_link', ''),
             'visuals': [str(path) for path in visuals],
         }
 
@@ -387,7 +431,9 @@ class EmailSender:
         self.db_path = os.getenv('DATABASE_PATH', './database/devnav.db')
         DatabaseManager(self.db_path)
     
-    def send_test_email(self, to_email, subject, body, template_name=None, from_name=None):
+    def send_test_email(self, to_email, subject, body, template_name=None, from_name=None,
+                        add_tracking=True, extra_context=None, log_status='sent',
+                        mark_contact_sent=True):
         """
         Send single test email with optional tracking
         Args:
@@ -400,7 +446,8 @@ class EmailSender:
                 subject=subject,
                 body=body,
                 template_name=template_name,
-                add_tracking=True,
+                add_tracking=add_tracking,
+                extra_context=extra_context,
             )
             visuals = get_campaign_visuals(template_name)
             html_body = build_html_email(
@@ -408,6 +455,7 @@ class EmailSender:
                 image_count=len(visuals),
                 template_name=template_name,
                 register_link=get_campaign_register_link(template_name),
+                verification_link=(extra_context or {}).get('verification_link', ''),
             )
             
             # Create message
@@ -444,17 +492,46 @@ class EmailSender:
                     server.starttls()
                 server.login(self.username, self.password)
                 server.send_message(msg)
-            
+
             # Log to database
-            self._log_send(to_email, subject, 'sent', template_name)
-            
+            self._log_send(
+                to_email,
+                subject,
+                log_status,
+                template_name,
+                mark_contact_sent=mark_contact_sent,
+            )
+
             return True, "Sent"
-        
+
         except Exception as e:
-            self._log_send(to_email, subject, 'failed', template_name, str(e))
+            failure_status = 'verification_failed' if log_status == 'verification_sent' else 'failed'
+            self._log_send(
+                to_email,
+                subject,
+                failure_status,
+                template_name,
+                str(e),
+                mark_contact_sent=False,
+            )
             return False, f"Failed: {str(e)}"
-    
-    def _log_send(self, email, subject, status, template_name=None, error=None):
+
+    def send_verification_email(self, to_email, subject, body, from_name=None, extra_context=None):
+        """Send a verification email without changing campaign delivery state."""
+        return self.send_test_email(
+            to_email,
+            subject,
+            body,
+            template_name='email_verification',
+            from_name=from_name,
+            add_tracking=False,
+            extra_context=extra_context,
+            log_status='verification_sent',
+            mark_contact_sent=False,
+        )
+
+    def _log_send(self, email, subject, status, template_name=None, error=None,
+                  mark_contact_sent=True):
         """Log email send to database"""
         try:
             conn = sqlite3.connect(self.db_path)
@@ -470,9 +547,9 @@ class EmailSender:
                     INSERT INTO email_logs (contact_id, sent_at, status, error_message)
                     VALUES (?, ?, ?, ?)
                 """, (contact_id, datetime.now(), status, error))
-                
+
                 # Update contact sent status
-                if status == 'sent':
+                if status == 'sent' and mark_contact_sent:
                     cursor.execute("UPDATE contacts SET sent = 1 WHERE id = ?", (contact_id,))
                 
                 conn.commit()

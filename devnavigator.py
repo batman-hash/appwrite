@@ -14,6 +14,10 @@ from typing import List, Tuple
 sys.path.insert(0, os.path.dirname(__file__))
 
 from python_engine.email_extractor import EmailValidator, get_email_extractor
+from python_engine.email_verification import (
+    DEFAULT_VERIFICATION_TEMPLATE,
+    EmailVerificationService,
+)
 from python_engine.database_manager import DatabaseManager
 from python_engine.template_manager import TemplateManager
 from python_engine.auto_email_extractor import AutoEmailExtractor
@@ -59,6 +63,22 @@ def cmd_extract_emails(args):
             print(f"✗ Failed: {len(failed)}")
             for fail in failed[:5]:
                 print(f"   - {fail}")
+
+
+def cmd_validate_email(args):
+    """Validate a single email address and show the reason."""
+    validator = EmailValidator(
+        enable_virus_check=os.getenv('ENABLE_VIRUS_CHECK', 'true').lower() == 'true',
+        enable_source_verification=not args.skip_dns,
+    )
+    normalized = args.email.strip().lower()
+    is_valid, reason = validator.is_valid_email(normalized)
+
+    print("\n📧 Email Validation")
+    print("-" * 40)
+    print(f"Email: {normalized}")
+    print(f"Valid: {'yes' if is_valid else 'no'}")
+    print(f"Reason: {reason}")
 
 
 def cmd_list_templates(args):
@@ -362,6 +382,117 @@ def cmd_import_send_approved(args):
     print(f"   Sent total:        {summary['sent_count']}")
 
 
+def cmd_send_verification_email(args):
+    """Create and optionally send an email verification request."""
+    template_name = args.template or DEFAULT_VERIFICATION_TEMPLATE
+    template_manager = EmailTemplateManager()
+    subject, body = template_manager.get_template(template_name)
+    if not subject or not body:
+        print(f"\n❌ Template '{template_name}' was not found.")
+        return
+
+    verification_service = EmailVerificationService()
+    payload = verification_service.prepare_verification(
+        args.email,
+        recipient_name=args.name or '',
+        source=args.source,
+        template_name=template_name,
+        expiry_hours=args.expiry_hours,
+        persist=not args.dry_run,
+    )
+    preview = template_manager.preview_template(
+        name=template_name,
+        to_email=args.email,
+        recipient_name=args.name or 'there',
+        extra_context=payload.to_template_context(),
+    )
+    from_name = EMAIL_ALIASES.get(template_name, 'DevNavigator Verification')
+
+    print(f"\n✉️ Verification email prepared for {payload.email}")
+    print("-" * 56)
+    print(f"Template:    {template_name}")
+    print(f"Sender name: {from_name}")
+    print(f"Code:        {payload.verification_code}")
+    print(f"Expires:     {payload.expires_at}")
+    print(f"Link:        {payload.verification_link}")
+    print("-" * 56)
+    print(f"Subject: {preview['subject']}")
+    print()
+    print(preview['body'][:900])
+    if len(preview['body']) > 900:
+        print("\n... preview truncated ...")
+
+    if args.dry_run:
+        print("\nℹ️  Dry run only. No verification request was stored or emailed.")
+        return
+
+    sender = EmailSender()
+    success, message = sender.send_verification_email(
+        payload.email,
+        subject,
+        body,
+        from_name=from_name,
+        extra_context=payload.to_template_context(),
+    )
+    if success:
+        verification_service.mark_sent(payload.request_id)
+    else:
+        verification_service.mark_failed(payload.request_id)
+
+    print()
+    if success:
+        print(f"✅ Verification email sent to {payload.email}")
+    else:
+        print(f"❌ Verification email failed for {payload.email}")
+    print(f"Status: {message}")
+
+
+def cmd_confirm_verification(args):
+    """Confirm a stored verification request."""
+    if not args.token and not (args.email and args.code):
+        print("❌ Provide either --token or both --email and --code")
+        return
+
+    verification_service = EmailVerificationService()
+    success, message, details = verification_service.confirm(
+        token=args.token,
+        email=args.email,
+        verification_code=args.code,
+    )
+
+    print("\n🔐 Verification Result")
+    print("-" * 40)
+    print(f"Success: {'yes' if success else 'no'}")
+    print(f"Message: {message}")
+    if details:
+        print(f"Email:   {details['email']}")
+        print(f"Request: {details['request_id']}")
+
+
+def cmd_verification_status(args):
+    """Show the current verification status for a contact."""
+    verification_service = EmailVerificationService()
+    status = verification_service.get_status(args.email)
+    if not status:
+        print(f"❌ No verification record found for {args.email}")
+        return
+
+    print("\n📋 Verification Status")
+    print("-" * 48)
+    print(f"Email:               {status['email']}")
+    print(f"Verified:            {'yes' if status['verified'] else 'no'}")
+    print(f"Contact status:      {status['verification_status']}")
+    print(f"Verification sent:   {status['verification_sent_at'] or 'not sent'}")
+    print(f"Verified at:         {status['verified_at'] or 'not verified'}")
+
+    latest_request = status.get('latest_request')
+    if latest_request:
+        print(f"Latest request:      {latest_request['status']}")
+        print(f"Requested at:        {latest_request['requested_at']}")
+        print(f"Request expires at:  {latest_request['expires_at']}")
+        print(f"Template:            {latest_request['template_name']}")
+
+
 def cmd_search_auto(args):
     """Automatically search and extract emails from internet with specific criteria"""
     extractor = AutoEmailExtractor()
@@ -464,6 +595,11 @@ Examples:
     extract_parser.add_argument('--text', help='Text to extract from')
     extract_parser.add_argument('--store', action='store_true', help='Store in database')
     extract_parser.add_argument('--source', default='manual', help='Source name')
+
+    validate_parser = subparsers.add_parser('validate-email', help='Validate a single email address')
+    validate_parser.add_argument('--email', required=True, help='Email address to validate')
+    validate_parser.add_argument('--skip-dns', action='store_true',
+                                 help='Only validate syntax/domain pattern without DNS lookups')
     
     # List templates command
     subparsers.add_parser('list-templates', help='List all templates')
@@ -503,6 +639,35 @@ Examples:
     import_send_parser.add_argument('--dry-run', action='store_true', help='Preview the send without emailing')
     import_send_parser.add_argument('--yes', action='store_true', help='Skip confirmation before sending')
 
+    verification_send_parser = subparsers.add_parser(
+        'send-verification-email',
+        help='Create and send a verification email to a contact',
+    )
+    verification_send_parser.add_argument('--email', required=True, help='Email address to verify')
+    verification_send_parser.add_argument('--name', help='Recipient name for the template')
+    verification_send_parser.add_argument('--source', default='verification_request',
+                                          help='Source label used when creating the contact')
+    verification_send_parser.add_argument('--template', default=DEFAULT_VERIFICATION_TEMPLATE,
+                                          help='Template used for the verification email')
+    verification_send_parser.add_argument('--expiry-hours', type=int,
+                                          help='Override verification request expiry time')
+    verification_send_parser.add_argument('--dry-run', action='store_true',
+                                          help='Preview the verification email without storing or sending')
+
+    confirm_verification_parser = subparsers.add_parser(
+        'confirm-verification',
+        help='Confirm an email verification request',
+    )
+    confirm_verification_parser.add_argument('--token', help='Verification token from a verification link')
+    confirm_verification_parser.add_argument('--email', help='Email address to confirm with a code')
+    confirm_verification_parser.add_argument('--code', help='Verification code for the email address')
+
+    verification_status_parser = subparsers.add_parser(
+        'verification-status',
+        help='Show the latest verification status for an email address',
+    )
+    verification_status_parser.add_argument('--email', required=True, help='Email address to inspect')
+
     archive_parser = subparsers.add_parser('archive-contacts', help='Archive contacts from active queue views')
     archive_parser.add_argument('--sent', action='store_true', help='Archive all sent contacts')
     archive_parser.add_argument('--all', action='store_true', help='Archive all active contacts')
@@ -541,6 +706,8 @@ Examples:
         cmd_init_db(args)
     elif args.command == 'extract-emails':
         cmd_extract_emails(args)
+    elif args.command == 'validate-email':
+        cmd_validate_email(args)
     elif args.command == 'list-templates':
         cmd_list_templates(args)
     elif args.command == 'add-template':
@@ -553,6 +720,12 @@ Examples:
         cmd_import_contacts(args)
     elif args.command == 'import-send-approved':
         cmd_import_send_approved(args)
+    elif args.command == 'send-verification-email':
+        cmd_send_verification_email(args)
+    elif args.command == 'confirm-verification':
+        cmd_confirm_verification(args)
+    elif args.command == 'verification-status':
+        cmd_verification_status(args)
     elif args.command == 'archive-contacts':
         cmd_archive_contacts(args)
     elif args.command == 'unarchive-contacts':

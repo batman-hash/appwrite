@@ -5,10 +5,11 @@ Extracts emails from various sources and validates them
 import re
 import sqlite3
 import os
-import hashlib
 from typing import List, Set, Tuple
-from urllib.parse import urlparse
 import json
+
+import dns.exception
+import dns.resolver
 
 
 class EmailValidator:
@@ -17,6 +18,7 @@ class EmailValidator:
     def __init__(self, enable_virus_check: bool = True, enable_source_verification: bool = True):
         self.enable_virus_check = enable_virus_check
         self.enable_source_verification = enable_source_verification
+        self.strict_dns = os.getenv('EMAIL_VALIDATION_STRICT_DNS', 'false').lower() == 'true'
         self.suspicious_domains = self._load_suspicious_domains()
         
     def _load_suspicious_domains(self) -> Set[str]:
@@ -36,19 +38,19 @@ class EmailValidator:
         
         email = email.strip().lower()
         
-        # Basic RFC 5322 validation
+        # Pragmatic email format validation for contact ingestion.
         pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
         if not re.match(pattern, email):
             return False, "Invalid email format"
-        
+
+        local_part, domain = email.rsplit('@', 1)
+
         # Check for suspicious domains
-        domain = email.split('@')[1]
         if domain in self.suspicious_domains:
             return False, f"Suspicious domain: {domain}"
-        
-        # Check for common spam patterns
-        if '+' in email.split('@')[0]:
-            # Gmail alias - flag but allow if configured
+
+        # Gmail aliases are often used for internal testing and spam traps.
+        if '+' in local_part and domain in {'gmail.com', 'googlemail.com'}:
             if not os.getenv('ALLOW_GMAIL_ALIASES', 'false').lower() == 'true':
                 return False, "Gmail alias detected (potential spam)"
         
@@ -61,18 +63,44 @@ class EmailValidator:
     
     def _verify_source_genuinely(self, email: str) -> Tuple[bool, str]:
         """
-        Attempt to verify if email source is genuine
-        In production, this would check MX records, DNS verification, etc.
+        Verify that the email domain is routable for mail delivery.
         """
+        domain = email.rsplit('@', 1)[1]
+        timeout = float(os.getenv('EMAIL_VALIDATION_DNS_TIMEOUT', '4'))
+
         try:
-            domain = email.split('@')[1]
-            # Check if domain has MX records (simplified check)
-            # In production, use dnspython library
             if domain.count('.') < 1:
                 return False, "Invalid domain structure"
-            return True, "Verified"
+
+            mx_records = dns.resolver.resolve(domain, 'MX', lifetime=timeout)
+            mx_hosts = [str(record.exchange).rstrip('.') for record in mx_records if str(record.exchange).strip('.')]
+            if mx_hosts:
+                return True, f"MX records found: {', '.join(mx_hosts[:2])}"
+
+            return False, "Domain has no usable MX records"
+        except dns.resolver.NXDOMAIN:
+            return False, "Domain does not exist"
+        except dns.resolver.NoAnswer:
+            for record_type in ('A', 'AAAA'):
+                try:
+                    fallback_records = dns.resolver.resolve(domain, record_type, lifetime=timeout)
+                    if list(fallback_records):
+                        return True, f"Domain resolves via {record_type}"
+                except (dns.resolver.NoAnswer, dns.resolver.NXDOMAIN, dns.resolver.NoNameservers):
+                    continue
+            return False, "Domain has no MX records"
+        except dns.resolver.NoNameservers:
+            return self._handle_dns_infrastructure_failure("No nameservers available for domain")
+        except dns.exception.Timeout:
+            return self._handle_dns_infrastructure_failure("DNS lookup timed out")
         except Exception as e:
-            return False, str(e)
+            return self._handle_dns_infrastructure_failure(f"DNS verification error: {e}")
+
+    def _handle_dns_infrastructure_failure(self, reason: str) -> Tuple[bool, str]:
+        """Allow syntax-only validation when DNS infrastructure is unavailable."""
+        if self.strict_dns:
+            return False, reason
+        return True, f"{reason}; accepted using syntax-only validation"
 
 
 class EmailExtractor:

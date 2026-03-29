@@ -26,6 +26,8 @@ class DatabaseManager:
         self.db_path = db_path
         self._ensure_directory()
         self._ensure_contact_archive_columns()
+        self._ensure_contact_verification_columns()
+        self._ensure_email_verification_table()
     
     def _ensure_directory(self):
         """Ensure database directory exists"""
@@ -60,6 +62,69 @@ class DatabaseManager:
 
         conn.commit()
         conn.close()
+
+    def _ensure_contact_verification_columns(self):
+        """Ensure verification-related columns exist on older databases."""
+        if not os.path.exists(self.db_path):
+            return
+
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT name
+            FROM sqlite_master
+            WHERE type = 'table' AND name = 'contacts'
+        """)
+        if not cursor.fetchone():
+            conn.close()
+            return
+
+        cursor.execute("PRAGMA table_info(contacts)")
+        columns = {row[1] for row in cursor.fetchall()}
+
+        if 'verification_status' not in columns:
+            cursor.execute("ALTER TABLE contacts ADD COLUMN verification_status TEXT DEFAULT 'not_requested'")
+        if 'verification_sent_at' not in columns:
+            cursor.execute("ALTER TABLE contacts ADD COLUMN verification_sent_at TIMESTAMP")
+        if 'verified_at' not in columns:
+            cursor.execute("ALTER TABLE contacts ADD COLUMN verified_at TIMESTAMP")
+
+        conn.commit()
+        conn.close()
+
+    def _ensure_email_verification_table(self):
+        """Ensure the verification request table exists for email confirmation flows."""
+        if not os.path.exists(self.db_path):
+            return
+
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS email_verification_requests (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                contact_id INTEGER,
+                email TEXT NOT NULL,
+                token_hash TEXT UNIQUE NOT NULL,
+                verification_code TEXT NOT NULL,
+                template_name TEXT DEFAULT 'email_verification',
+                status TEXT DEFAULT 'pending',
+                requested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                expires_at TIMESTAMP NOT NULL,
+                verified_at TIMESTAMP,
+                FOREIGN KEY (contact_id) REFERENCES contacts(id)
+            )
+        """)
+        cursor.execute("""
+            CREATE INDEX IF NOT EXISTS idx_email_verification_email
+            ON email_verification_requests(email)
+        """)
+        cursor.execute("""
+            CREATE INDEX IF NOT EXISTS idx_email_verification_status
+            ON email_verification_requests(status)
+        """)
+        conn.commit()
+        conn.close()
     
     def initialize_database(self):
         """Create all necessary tables"""
@@ -80,6 +145,9 @@ class DatabaseManager:
                 city TEXT,
                 source TEXT,
                 verified INTEGER DEFAULT 0,
+                verification_status TEXT DEFAULT 'not_requested',
+                verification_sent_at TIMESTAMP,
+                verified_at TIMESTAMP,
                 consent INTEGER DEFAULT 0,
                 sent INTEGER DEFAULT 0,
                 opened INTEGER DEFAULT 0,
@@ -93,7 +161,8 @@ class DatabaseManager:
             )
         """)
         self._ensure_contact_archive_columns()
-        
+        self._ensure_contact_verification_columns()
+
         # Email templates table
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS email_templates (
@@ -136,6 +205,22 @@ class DatabaseManager:
                 FOREIGN KEY (contact_id) REFERENCES contacts(id),
                 FOREIGN KEY (campaign_id) REFERENCES campaigns(id),
                 FOREIGN KEY (template_id) REFERENCES email_templates(id)
+            )
+        """)
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS email_verification_requests (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                contact_id INTEGER,
+                email TEXT NOT NULL,
+                token_hash TEXT UNIQUE NOT NULL,
+                verification_code TEXT NOT NULL,
+                template_name TEXT DEFAULT 'email_verification',
+                status TEXT DEFAULT 'pending',
+                requested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                expires_at TIMESTAMP NOT NULL,
+                verified_at TIMESTAMP,
+                FOREIGN KEY (contact_id) REFERENCES contacts(id)
             )
         """)
         
@@ -181,7 +266,18 @@ class DatabaseManager:
             CREATE INDEX IF NOT EXISTS idx_contacts_archived ON contacts(archived)
         """)
         cursor.execute("""
+            CREATE INDEX IF NOT EXISTS idx_contacts_verification_status ON contacts(verification_status)
+        """)
+        cursor.execute("""
             CREATE INDEX IF NOT EXISTS idx_email_logs_contact ON email_logs(contact_id)
+        """)
+        cursor.execute("""
+            CREATE INDEX IF NOT EXISTS idx_email_verification_email
+            ON email_verification_requests(email)
+        """)
+        cursor.execute("""
+            CREATE INDEX IF NOT EXISTS idx_email_verification_status
+            ON email_verification_requests(status)
         """)
         cursor.execute("""
             CREATE INDEX IF NOT EXISTS idx_ip_tracking_address ON ip_tracking(ip_address)
@@ -218,17 +314,42 @@ DevNavigator Team
 matteopennacchia43@gmail.com
 """.strip()
         }
-        
+        verification_template = {
+            'name': 'email_verification',
+            'subject': "Confirm your email address for DevNavigator",
+            'body': """Hi {name},
+
+Please confirm that {email} is the right address for DevNavigator updates.
+
+Verify your email: $verification_link
+Verification code: $verification_code
+Expires at: $verification_expires_at
+
+If you did not request this, you can safely ignore this email.
+
+Best regards,
+DevNavigator Team
+""".strip()
+        }
+
         try:
             cursor.execute("""
                 INSERT OR IGNORE INTO email_templates (name, subject, body, is_default)
                 VALUES (?, ?, ?, 1)
             """, (default_template['name'], default_template['subject'], default_template['body']))
-            
+            cursor.execute("""
+                INSERT OR IGNORE INTO email_templates (name, subject, body, is_default)
+                VALUES (?, ?, ?, 0)
+            """, (
+                verification_template['name'],
+                verification_template['subject'],
+                verification_template['body'],
+            ))
+
             conn.commit()
-            print("✓ Default template inserted")
+            print("✓ Default templates inserted")
         except sqlite3.IntegrityError:
-            print("~ Default template already exists")
+            print("~ Default templates already exist")
         finally:
             conn.close()
     
@@ -582,6 +703,322 @@ matteopennacchia43@gmail.com
         conn.commit()
         conn.close()
         return approved_count
+
+    def upsert_contact_for_verification(
+        self,
+        email: str,
+        name: str = '',
+        source: str = 'verification_request',
+    ) -> int:
+        """Ensure a contact row exists before creating a verification request."""
+        normalized_email = email.strip().lower()
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        cursor.execute("SELECT id, name, source FROM contacts WHERE email = ?", (normalized_email,))
+        row = cursor.fetchone()
+
+        if row:
+            contact_id, existing_name, existing_source = row
+            cursor.execute(
+                """
+                UPDATE contacts
+                SET
+                    name = CASE
+                        WHEN COALESCE(name, '') = '' AND ? != '' THEN ?
+                        ELSE name
+                    END,
+                    source = CASE
+                        WHEN COALESCE(source, '') = '' AND ? != '' THEN ?
+                        ELSE source
+                    END,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+                """,
+                (name.strip(), name.strip(), source.strip(), source.strip(), contact_id),
+            )
+            conn.commit()
+            conn.close()
+            return contact_id
+
+        cursor.execute(
+            """
+            INSERT INTO contacts (
+                email, name, source, verified, verification_status, consent, sent
+            ) VALUES (?, ?, ?, 0, 'not_requested', 0, 0)
+            """,
+            (normalized_email, name.strip(), source.strip()),
+        )
+        contact_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+        return contact_id
+
+    def create_verification_request(
+        self,
+        contact_id: int,
+        email: str,
+        token_hash: str,
+        verification_code: str,
+        expires_at: str,
+        template_name: str = 'email_verification',
+    ) -> int:
+        """Store a new verification request and supersede older pending ones."""
+        normalized_email = email.strip().lower()
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        cursor.execute(
+            """
+            UPDATE email_verification_requests
+            SET status = 'superseded'
+            WHERE email = ? AND status IN ('pending', 'sent')
+            """,
+            (normalized_email,),
+        )
+        cursor.execute(
+            """
+            INSERT INTO email_verification_requests (
+                contact_id, email, token_hash, verification_code, template_name, status, expires_at
+            ) VALUES (?, ?, ?, ?, ?, 'pending', ?)
+            """,
+            (contact_id, normalized_email, token_hash, verification_code, template_name, expires_at),
+        )
+        request_id = cursor.lastrowid
+        cursor.execute(
+            """
+            UPDATE contacts
+            SET verification_status = 'pending', updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+            """,
+            (contact_id,),
+        )
+
+        conn.commit()
+        conn.close()
+        return request_id
+
+    def set_verification_request_status(self, request_id: int, status: str) -> bool:
+        """Update a verification request and keep the contact's latest status in sync."""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT contact_id
+            FROM email_verification_requests
+            WHERE id = ?
+            """,
+            (request_id,),
+        )
+        row = cursor.fetchone()
+        if not row:
+            conn.close()
+            return False
+
+        contact_id = row[0]
+        cursor.execute(
+            """
+            UPDATE email_verification_requests
+            SET status = ?
+            WHERE id = ?
+            """,
+            (status, request_id),
+        )
+
+        if status == 'sent':
+            cursor.execute(
+                """
+                UPDATE contacts
+                SET verification_status = 'sent',
+                    verification_sent_at = CURRENT_TIMESTAMP,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+                """,
+                (contact_id,),
+            )
+        elif status in {'failed', 'expired'}:
+            cursor.execute(
+                """
+                UPDATE contacts
+                SET verification_status = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+                """,
+                (status, contact_id),
+            )
+
+        conn.commit()
+        conn.close()
+        return True
+
+    def confirm_verification(
+        self,
+        *,
+        token_hash: Optional[str] = None,
+        email: Optional[str] = None,
+        verification_code: Optional[str] = None,
+    ) -> Tuple[bool, str, Optional[Dict[str, object]]]:
+        """Confirm a verification request by token hash or email + code."""
+        if not token_hash and not (email and verification_code):
+            return False, "Provide a token or an email + verification code", None
+
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        if token_hash:
+            cursor.execute(
+                """
+                SELECT id, contact_id, email, status, expires_at,
+                       CASE WHEN datetime(expires_at) <= datetime('now') THEN 1 ELSE 0 END AS is_expired
+                FROM email_verification_requests
+                WHERE token_hash = ?
+                ORDER BY requested_at DESC
+                LIMIT 1
+                """,
+                (token_hash,),
+            )
+        else:
+            cursor.execute(
+                """
+                SELECT id, contact_id, email, status, expires_at,
+                       CASE WHEN datetime(expires_at) <= datetime('now') THEN 1 ELSE 0 END AS is_expired
+                FROM email_verification_requests
+                WHERE email = ? AND verification_code = ?
+                ORDER BY requested_at DESC
+                LIMIT 1
+                """,
+                (email.strip().lower(), verification_code.strip()),
+            )
+
+        row = cursor.fetchone()
+        if not row:
+            conn.close()
+            return False, "Verification request not found", None
+
+        request_id, contact_id, matched_email, status, expires_at, is_expired = row
+
+        if status == 'verified':
+            conn.close()
+            return True, "Email already verified", {
+                'request_id': request_id,
+                'contact_id': contact_id,
+                'email': matched_email,
+                'expires_at': expires_at,
+            }
+
+        if is_expired:
+            cursor.execute(
+                """
+                UPDATE email_verification_requests
+                SET status = 'expired'
+                WHERE id = ?
+                """,
+                (request_id,),
+            )
+            cursor.execute(
+                """
+                UPDATE contacts
+                SET verification_status = 'expired', updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+                """,
+                (contact_id,),
+            )
+            conn.commit()
+            conn.close()
+            return False, "Verification request has expired", None
+
+        if status not in {'pending', 'sent'}:
+            conn.close()
+            return False, f"Verification request is {status}", None
+
+        cursor.execute(
+            """
+            UPDATE email_verification_requests
+            SET status = 'verified', verified_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+            """,
+            (request_id,),
+        )
+        cursor.execute(
+            """
+            UPDATE email_verification_requests
+            SET status = 'superseded'
+            WHERE email = ? AND id != ? AND status IN ('pending', 'sent')
+            """,
+            (matched_email, request_id),
+        )
+        cursor.execute(
+            """
+            UPDATE contacts
+            SET verified = 1,
+                verification_status = 'verified',
+                verified_at = CURRENT_TIMESTAMP,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+            """,
+            (contact_id,),
+        )
+
+        conn.commit()
+        conn.close()
+        return True, "Email verified successfully", {
+            'request_id': request_id,
+            'contact_id': contact_id,
+            'email': matched_email,
+            'expires_at': expires_at,
+        }
+
+    def get_verification_status(self, email: str) -> Optional[Dict[str, object]]:
+        """Return the latest verification state for a contact email."""
+        normalized_email = email.strip().lower()
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        cursor.execute(
+            """
+            SELECT id, email, verified, verification_status, verification_sent_at, verified_at
+            FROM contacts
+            WHERE email = ?
+            """,
+            (normalized_email,),
+        )
+        contact_row = cursor.fetchone()
+        if not contact_row:
+            conn.close()
+            return None
+
+        cursor.execute(
+            """
+            SELECT id, status, template_name, requested_at, expires_at, verified_at
+            FROM email_verification_requests
+            WHERE email = ?
+            ORDER BY requested_at DESC, id DESC
+            LIMIT 1
+            """,
+            (normalized_email,),
+        )
+        request_row = cursor.fetchone()
+        conn.close()
+
+        latest_request = None
+        if request_row:
+            latest_request = {
+                'request_id': request_row[0],
+                'status': request_row[1],
+                'template_name': request_row[2],
+                'requested_at': request_row[3],
+                'expires_at': request_row[4],
+                'verified_at': request_row[5],
+            }
+
+        return {
+            'contact_id': contact_row[0],
+            'email': contact_row[1],
+            'verified': bool(contact_row[2]),
+            'verification_status': contact_row[3],
+            'verification_sent_at': contact_row[4],
+            'verified_at': contact_row[5],
+            'latest_request': latest_request,
+        }
 
     def _load_contacts_from_file(self, path: Path) -> List[Dict[str, str]]:
         """Load contacts from CSV when possible, otherwise fall back to raw email extraction."""

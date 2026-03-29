@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
+    "one-go": "bash one-go.sh",
     "db:init": "python3 python_engine/database_manager.py",
     "db:templates": "python3 python_engine/template_manager.py",
     "build:cpp": "cd cpp_crawler && mkdir -p build && cd build && cmake .. && make",
@@ -13,7 +14,9 @@
     "extract:emails": "python3 python_engine/email_extractor.py",
     "test": "python3 -m pytest tests/",
     "docker:build": "docker build -t devnavigator .",
-    "docker:run": "docker run -v $(pwd)/.env:/app/.env -v $(pwd)/database:/app/database devnavigator"
+    "docker:run": "docker run --rm -it -v $(pwd):/workspace devnavigator",
+    "docker:init-db": "docker run --rm -it -v $(pwd):/workspace devnavigator init-db",
+    "docker:stats": "docker run --rm -it -v $(pwd):/workspace devnavigator stats"
   },
   "keywords": [
     "email",

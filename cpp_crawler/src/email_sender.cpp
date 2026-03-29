@@ -159,11 +159,16 @@ bool send_email(const std::string& to, const std::string& name) {
 }
 
 void process_and_send_emails(const std::string& db_path) {
-    sqlite3* db;
+    sqlite3* db = nullptr;
     sqlite3_stmt* stmt = nullptr;
 
     if (sqlite3_open(db_path.c_str(), &db) != SQLITE_OK) {
-        std::cerr << "Failed to open DB\n";
+        std::cerr << "Failed to open DB at " << db_path;
+        if (db != nullptr) {
+            std::cerr << ": " << sqlite3_errmsg(db);
+        }
+        std::cerr << "\n";
+        sqlite3_close(db);
         return;
     }
 

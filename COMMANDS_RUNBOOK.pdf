@@ -1,0 +1,361 @@
+%PDF-1.4
+%‚„œ”
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [4 0 R 6 0 R 8 0 R 10 0 R 12 0 R 14 0 R] /Count 6 >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Courier >>
+endobj
+4 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 5 0 R >>
+endobj
+5 0 obj
+<< /Length 1704 >>
+stream
+BT
+/F1 10 Tf
+14 TL
+1 0 0 1 50 742 Tm
+(DEVNAVIGATOR COMMANDS RUNBOOK) Tj
+T* (-----------------------------) Tj
+T* () Tj
+T* (This file collects the commands we used so far, with short comments, so you can quickly see) Tj
+T* (what to run and in what order.) Tj
+T* () Tj
+T* (RECOMMENDED ORDER) Tj
+T* (-----------------) Tj
+T* () Tj
+T* (Run these first if you want the safest flow:) Tj
+T* () Tj
+T* (    # 1\) Initialize the database and create default templates) Tj
+T* (    python3 devnavigator.py init-db) Tj
+T* (    ) Tj
+T* (    # 2\) Extract emails from a local file and save valid results to the database) Tj
+T* (    python3 devnavigator.py extract-emails --file your_file.txt --store --source manual) Tj
+T* (    ) Tj
+T* (    # 3\) Check what was saved) Tj
+T* (    python3 devnavigator.py stats) Tj
+T* (    python3 devnavigator.py queue --queue all --limit 20) Tj
+T* (    ) Tj
+T* (    # 4\) Validate a single email manually) Tj
+T* (    python3 devnavigator.py validate-email --email person@example.com) Tj
+T* () Tj
+T* () Tj
+T* (SETUP) Tj
+T* (-----) Tj
+T* () Tj
+T* (    # Optional: create and edit your environment file) Tj
+T* (    cp .env.example .env) Tj
+T* () Tj
+T* () Tj
+T* (    # Load the database structure and default templates) Tj
+T* (    python3 devnavigator.py init-db) Tj
+T* () Tj
+T* () Tj
+T* (Comment:) Tj
+T* (Use this once before running extraction, import, or verification commands on a new database.) Tj
+T* () Tj
+T* (DOCKER WORKFLOW) Tj
+T* (---------------) Tj
+T* () Tj
+T* (    # Build the Docker image) Tj
+T* (    docker build -t devnavigator .) Tj
+T* () Tj
+T* () Tj
+T* (    # Show the CLI help from inside Docker) Tj
+T* (    docker run --rm -it -v "$\(pwd\):/workspace" devnavigator) Tj
+ET
+endstream
+endobj
+6 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 7 0 R >>
+endobj
+7 0 obj
+<< /Length 1942 >>
+stream
+BT
+/F1 10 Tf
+14 TL
+1 0 0 1 50 742 Tm
+() Tj
+T* () Tj
+T* (    # Initialize the database in the mounted project folder) Tj
+T* (    docker run --rm -it -v "$\(pwd\):/workspace" devnavigator init-db) Tj
+T* () Tj
+T* () Tj
+T* (    # Extract and save emails from a local file using Docker) Tj
+T* (    docker run --rm -it -v "$\(pwd\):/workspace" devnavigator \\) Tj
+T* (      extract-emails --file sample_emails.csv --store --source manual) Tj
+T* () Tj
+T* () Tj
+T* (    # Check stats and queue using Docker) Tj
+T* (    docker run --rm -it -v "$\(pwd\):/workspace" devnavigator stats) Tj
+T* (    docker run --rm -it -v "$\(pwd\):/workspace" devnavigator queue --queue all --limit 20) Tj
+T* () Tj
+T* () Tj
+T* (    # Validate one email using Docker) Tj
+T* (    docker run --rm -it -v "$\(pwd\):/workspace" devnavigator \\) Tj
+T* (      validate-email --email person@example.com) Tj
+T* () Tj
+T* () Tj
+T* (Comment:) Tj
+T* (The Docker image runs devnavigator.py directly. Mounting the repo to /workspace gives the) Tj
+T* (container access to your local .env, files, and database folder.) Tj
+T* () Tj
+T* (EXTRACT EMAILS FROM A FILE) Tj
+T* (--------------------------) Tj
+T* () Tj
+T* (    # Extract emails from any text-like file and store them in the database) Tj
+T* (    python3 devnavigator.py extract-emails --file your_file.txt --store --source manual) Tj
+T* () Tj
+T* () Tj
+T* (    # Example using the helper shell script) Tj
+T* (    ./extract-emails.sh your_file.txt) Tj
+T* () Tj
+T* () Tj
+T* (Comment:) Tj
+T* (This path validates emails before saving them. Invalid addresses are skipped and shown in) Tj
+T* (the output.) Tj
+T* () Tj
+T* (IMPORT A STRUCTURED CSV) Tj
+T* (-----------------------) Tj
+T* () Tj
+T* (    # Import a CSV file that has an email column) Tj
+T* (    python3 devnavigator.py import-contacts --file your_contacts.csv --source csv_upload) Tj
+T* () Tj
+T* () Tj
+T* (    # Import and mark contacts as approved/sendable immediately) Tj
+ET
+endstream
+endobj
+8 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 9 0 R >>
+endobj
+9 0 obj
+<< /Length 1638 >>
+stream
+BT
+/F1 10 Tf
+14 TL
+1 0 0 1 50 742 Tm
+(    python3 devnavigator.py import-contacts --file your_contacts.csv --source csv_upload) Tj
+T* (    --consent) Tj
+T* () Tj
+T* () Tj
+T* (Comment:) Tj
+T* (Use this when your file already has columns like email,name,company,country.) Tj
+T* () Tj
+T* (CHECK WHAT WAS SAVED) Tj
+T* (--------------------) Tj
+T* () Tj
+T* (    # Show high-level contact counts) Tj
+T* (    python3 devnavigator.py stats) Tj
+T* () Tj
+T* () Tj
+T* (    # Show the queue with a few rows) Tj
+T* (    python3 devnavigator.py queue --queue all --limit 20) Tj
+T* () Tj
+T* () Tj
+T* (    # Show only contacts ready to send) Tj
+T* (    python3 devnavigator.py queue --queue ready --limit 20) Tj
+T* () Tj
+T* () Tj
+T* (    # Show only contacts needing review) Tj
+T* (    python3 devnavigator.py queue --queue review --limit 20) Tj
+T* () Tj
+T* () Tj
+T* (    # Show only recent contacts) Tj
+T* (    python3 devnavigator.py queue --queue recent --limit 20 --recent-hours 24) Tj
+T* () Tj
+T* () Tj
+T* (Comment:) Tj
+T* (These commands are the quickest way to confirm extraction/import worked.) Tj
+T* () Tj
+T* (VALIDATE EMAILS) Tj
+T* (---------------) Tj
+T* () Tj
+T* (    # Full validation for one email) Tj
+T* (    python3 devnavigator.py validate-email --email person@example.com) Tj
+T* () Tj
+T* () Tj
+T* (    # Format-only validation if DNS checks are not wanted) Tj
+T* (    python3 devnavigator.py validate-email --email person@example.com --skip-dns) Tj
+T* () Tj
+T* () Tj
+T* (Comment:) Tj
+T* (Validation checks syntax and, by default, also tries DNS/MX validation when available.) Tj
+T* () Tj
+T* (AUTOMATED SEARCH AND SAVE TO DATABASE) Tj
+ET
+endstream
+endobj
+10 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 11 0 R >>
+endobj
+11 0 obj
+<< /Length 1904 >>
+stream
+BT
+/F1 10 Tf
+14 TL
+1 0 0 1 50 742 Tm
+(-------------------------------------) Tj
+T* () Tj
+T* (    # Search automatically and store results in the database) Tj
+T* (    python3 devnavigator.py search-auto --title "frontend developer" --keywords) Tj
+T* (    "react,javascript" --country US --remote) Tj
+T* () Tj
+T* () Tj
+T* (    # Another automatic search example) Tj
+T* (    python3 devnavigator.py search-auto --title "python developer" --keywords) Tj
+T* (    "django,backend,remote" --remote) Tj
+T* () Tj
+T* () Tj
+T* (    # Search and filter results using the current filtered workflow) Tj
+T* (    python3 devnavigator.py search-filtered --title "frontend developer" --keywords) Tj
+T* (    "react,javascript" --country US --remote) Tj
+T* () Tj
+T* () Tj
+T* (Comment:) Tj
+T* (search-auto stores results in the database. After running it, check with stats and queue.) Tj
+T* () Tj
+T* (APPROVE OR REVIEW CONTACTS) Tj
+T* (--------------------------) Tj
+T* () Tj
+T* (    # Approve the newest review contacts) Tj
+T* (    python3 devnavigator.py approve-recent-contacts --limit 20 --recent-hours 24) Tj
+T* () Tj
+T* () Tj
+T* (    # Archive sent contacts) Tj
+T* (    python3 devnavigator.py archive-contacts --sent) Tj
+T* () Tj
+T* () Tj
+T* (    # Restore all archived contacts) Tj
+T* (    python3 devnavigator.py unarchive-contacts --all) Tj
+T* () Tj
+T* () Tj
+T* (Comment:) Tj
+T* (These are useful after extraction, once you start managing sendable contacts.) Tj
+T* () Tj
+T* (VERIFICATION EMAIL WORKFLOW) Tj
+T* (---------------------------) Tj
+T* () Tj
+T* (    # Send a verification email to one contact) Tj
+T* (    python3 devnavigator.py send-verification-email --email person@example.com --name "Jane) Tj
+T* (    Doe") Tj
+T* () Tj
+T* () Tj
+T* (    # Preview the verification email without saving or sending) Tj
+T* (    python3 devnavigator.py send-verification-email --email person@example.com --name "Jane) Tj
+ET
+endstream
+endobj
+12 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 13 0 R >>
+endobj
+13 0 obj
+<< /Length 1543 >>
+stream
+BT
+/F1 10 Tf
+14 TL
+1 0 0 1 50 742 Tm
+(    Doe" --dry-run) Tj
+T* () Tj
+T* () Tj
+T* (    # Confirm verification using email + code) Tj
+T* (    python3 devnavigator.py confirm-verification --email person@example.com --code 123456) Tj
+T* () Tj
+T* () Tj
+T* (    # Check verification status) Tj
+T* (    python3 devnavigator.py verification-status --email person@example.com) Tj
+T* () Tj
+T* () Tj
+T* (Comment:) Tj
+T* (Set EMAIL_VERIFICATION_BASE_URL in .env if you want a real clickable verification link in) Tj
+T* (the message.) Tj
+T* () Tj
+T* (CURRENT SAFE WORKFLOW) Tj
+T* (---------------------) Tj
+T* () Tj
+T* (If your goal is:) Tj
+T* () Tj
+T* (1. Extract emails) Tj
+T* (2. Save them to the database) Tj
+T* (3. Check validation) Tj
+T* () Tj
+T* (Run this:) Tj
+T* () Tj
+T* (    python3 devnavigator.py init-db) Tj
+T* (    python3 devnavigator.py extract-emails --file your_file.txt --store --source manual) Tj
+T* (    python3 devnavigator.py stats) Tj
+T* (    python3 devnavigator.py queue --queue all --limit 20) Tj
+T* (    python3 devnavigator.py validate-email --email person@example.com) Tj
+T* () Tj
+T* () Tj
+T* (NOTES ABOUT OLDER HELPER FILES) Tj
+T* (------------------------------) Tj
+T* () Tj
+T* (    # Interactive helper) Tj
+T* (    python3 extract.py) Tj
+T* () Tj
+T* () Tj
+T* (    # Older batch helper) Tj
+T* (    bash batch-extract.sh) Tj
+T* () Tj
+T* () Tj
+T* (Comment:) Tj
+T* (These helpers are older wrappers. The most reliable commands right now are the direct) Tj
+T* (python3 devnavigator.py ... commands listed above.) Tj
+T* () Tj
+ET
+endstream
+endobj
+14 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 15 0 R >>
+endobj
+15 0 obj
+<< /Length 339 >>
+stream
+BT
+/F1 10 Tf
+14 TL
+1 0 0 1 50 742 Tm
+(CREATE PDF VERSION OF THIS RUNBOOK) Tj
+T* (----------------------------------) Tj
+T* () Tj
+T* (    # Generate a PDF from this markdown file) Tj
+T* (    ./create-commands-runbook-pdf.sh) Tj
+T* () Tj
+T* () Tj
+T* (Comment:) Tj
+T* (This requires pandoc and a PDF engine like xelatex or wkhtmltopdf.) Tj
+ET
+endstream
+endobj
+xref
+0 16
+0000000000 65535 f 
+0000000015 00000 n 
+0000000064 00000 n 
+0000000154 00000 n 
+0000000222 00000 n 
+0000000348 00000 n 
+0000002104 00000 n 
+0000002230 00000 n 
+0000004224 00000 n 
+0000004350 00000 n 
+0000006040 00000 n 
+0000006168 00000 n 
+0000008125 00000 n 
+0000008253 00000 n 
+0000009849 00000 n 
+0000009977 00000 n 
+trailer
+<< /Size 16 /Root 1 0 R >>
+startxref
+10368
+%%EOF

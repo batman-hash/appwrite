@@ -9,6 +9,7 @@ Automated email campaign platform for educational initiatives. Extract, validate
 - Auto-validate email format and authenticity
 - Block suspicious domains and temporary email services
 - Source verification for genuine contacts
+- Verification email workflow with expiring tokens and codes
 
 ✅ **Secure Database Management**
 - SQLite database with encrypted credentials
@@ -151,6 +152,28 @@ python3 devnavigator.py extract-emails \
 python3 devnavigator.py list-templates
 ```
 
+### Validate One Email
+
+```bash
+python3 devnavigator.py validate-email --email person@example.com
+```
+
+### Send Verification Email
+
+```bash
+python3 devnavigator.py send-verification-email \
+  --email person@example.com \
+  --name "Jane Doe"
+```
+
+### Confirm Verification
+
+```bash
+python3 devnavigator.py confirm-verification \
+  --email person@example.com \
+  --code 123456
+```
+
 **Output:**
 ```
 📋 Email Templates:
@@ -187,6 +210,10 @@ id (PK)           - Contact ID
 email (UNIQUE)    - Email address
 name              - Contact name
 source            - Where email came from
+verified          - Email confirmed flag (0/1)
+verification_status - Current verification workflow status
+verification_sent_at - Last verification email timestamp
+verified_at       - When the email was confirmed
 consent           - Consent flag (0/1)
 sent              - Email sent flag (0/1)
 opened            - Email opened flag (0/1)
@@ -205,6 +232,20 @@ body              - Email body (supports $variables)
 is_default        - Default template flag
 created_at        - Timestamp
 updated_at        - Timestamp
+```
+
+### email_verification_requests table
+```
+id (PK)           - Verification request ID
+contact_id (FK)   - Related contact
+email             - Email being verified
+token_hash        - Hashed verification token
+verification_code - Six-digit verification code
+template_name     - Template used for the verification email
+status            - pending/sent/verified/failed/expired/superseded
+requested_at      - Request creation timestamp
+expires_at        - Expiration timestamp
+verified_at       - Verification completion timestamp
 ```
 
 ### campaigns table
@@ -261,6 +302,10 @@ MAX_EMAILS_PER_BATCH       # Batch size for sending
 ENABLE_VIRUS_CHECK         # Enable security scans
 ENABLE_SOURCE_VERIFICATION # Verify email sources
 ALLOW_GMAIL_ALIASES        # Allow Gmail aliases
+EMAIL_VALIDATION_DNS_TIMEOUT
+EMAIL_VALIDATION_STRICT_DNS
+EMAIL_VERIFICATION_BASE_URL
+EMAIL_VERIFICATION_EXPIRY_HOURS
 ```
 
 ## Building from Source
@@ -296,9 +341,40 @@ npm test
 # Build image
 npm run docker:build
 
-# Run container
+# Show CLI help inside Docker
 npm run docker:run
 ```
+
+```bash
+# Or with plain Docker
+docker build -t devnavigator .
+docker run --rm -it -v "$(pwd):/workspace" devnavigator
+```
+
+```bash
+# Initialize the database from Docker
+docker run --rm -it -v "$(pwd):/workspace" devnavigator init-db
+```
+
+```bash
+# Extract emails from a file in the current repo
+docker run --rm -it -v "$(pwd):/workspace" devnavigator \
+  extract-emails --file sample_emails.csv --store --source manual
+```
+
+```bash
+# Check saved contacts
+docker run --rm -it -v "$(pwd):/workspace" devnavigator stats
+docker run --rm -it -v "$(pwd):/workspace" devnavigator queue --queue all --limit 20
+```
+
+```bash
+# Validate one email from Docker
+docker run --rm -it -v "$(pwd):/workspace" devnavigator \
+  validate-email --email person@example.com
+```
+
+The container now runs the real Python CLI, not the placeholder Node entrypoint. Mounting the repo to `/workspace` lets Docker use your local `.env`, `database/`, and input files naturally.
 
 ## Configuration Examples
 
@@ -346,6 +422,11 @@ SMTP_USE_TLS=true
 - Check email format
 - Verify not on suspicious domain list
 - Enable/disable source verification
+- Set `EMAIL_VALIDATION_STRICT_DNS=false` if DNS is unavailable in your environment
+
+### "Verification link is a placeholder"
+- Set `EMAIL_VERIFICATION_BASE_URL` to your real verification endpoint
+- Use `python3 devnavigator.py send-verification-email --dry-run ...` to preview the rendered email
 
 ## Contributing
 

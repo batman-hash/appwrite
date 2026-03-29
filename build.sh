@@ -5,6 +5,7 @@ set -e
 
 BUILD_DIR="cpp_crawler/build"
 BIN_NAME="devnavigator"
+PROJECT_ROOT="$(pwd)"
 
 echo "🔨 Building C++ crawler..."
 
@@ -14,10 +15,13 @@ cd "$BUILD_DIR"
 
 # Run CMake and build
 cmake ..
-make
+cmake --build .
 
 echo "✅ Build complete!"
-echo "📍 Binary location: $BUILD_DIR/$BIN_NAME"
+echo "📍 Binary location: $PROJECT_ROOT/$BUILD_DIR/$BIN_NAME"
 echo ""
 echo "To run email sender:"
-echo "  ./$BIN_NAME"
+echo "  $PROJECT_ROOT/$BUILD_DIR/$BIN_NAME"
+echo ""
+echo "Optional custom database path:"
+echo "  $PROJECT_ROOT/$BUILD_DIR/$BIN_NAME /path/to/devnav.db"
