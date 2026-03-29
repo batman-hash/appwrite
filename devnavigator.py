@@ -14,6 +14,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 from python_engine.email_extractor import get_email_extractor
 from python_engine.database_manager import DatabaseManager
 from python_engine.template_manager import TemplateManager
+from python_engine.auto_email_extractor import AutoEmailExtractor
 from dotenv import load_dotenv
 
 
@@ -96,6 +97,74 @@ def cmd_stats(args):
     print("-" * 40)
 
 
+def cmd_search_auto(args):
+    """Automatically search and extract emails from internet with specific criteria"""
+    extractor = AutoEmailExtractor()
+    
+    title = args.title or input("Job title (e.g., 'junior frontend developer'): ")
+    keywords_input = args.keywords or input("Keywords (comma-separated): ")
+    keywords = [k.strip() for k in keywords_input.split(',')]
+    country_input = args.country or input("Country (optional): ").strip()
+    country = country_input if country_input else None
+    
+    criteria = {
+        'title': title,
+        'keywords': keywords,
+        'country': country,
+        'remote': args.remote
+    }
+    
+    print(f"\n🚀 Starting automated search with criteria:")
+    for key, val in criteria.items():
+        print(f"   {key}: {val}")
+    
+    stored, results = extractor.search_all_sources(criteria, limit=100)
+    
+    print(f"\n✅ Extraction complete!")
+    print(f"   Emails stored: {stored}")
+    print(f"   Ready for campaign: {stored}")
+    
+    # Show preview
+    print(f"\n📧 Preview (first 5):")
+    from python_engine.database_manager import DatabaseManager
+    manager = DatabaseManager()
+    recent = manager.get_recent_contacts(5)
+    if recent:
+        for contact in recent:
+            print(f"   {contact['email']} - {contact.get('title', 'Unknown')}")
+
+
+def cmd_search_filtered(args):
+    """Search with automatic filtering by profile criteria"""
+    extractor = AutoEmailExtractor()
+    
+    criteria = {
+        'title': args.title or 'junior frontend developer',
+        'keywords': args.keywords.split(',') if args.keywords else ['react', 'javascript', 'remote'],
+        'country': args.country or None,
+        'remote': args.remote
+    }
+    
+    print(f"\n🎯 Searching for: {criteria['title']}")
+    print(f"   Keywords: {', '.join(criteria['keywords'])}")
+    if criteria.get('country'):
+        print(f"   Country: {criteria['country']}")
+    if criteria['remote']:
+        print(f"   Remote jobs only")
+    
+    results = extractor.search_with_filters(criteria)
+    
+    print(f"\n✅ Found {len(results)} matching profiles!")
+    
+    if results:
+        print(f"\n📧 Top matches:")
+        for i, contact in enumerate(results[:10], 1):
+            print(f"\n{i}. {contact.get('name', 'Unknown')}")
+            print(f"   Email: {contact['email']}")
+            print(f"   Title: {contact.get('title', 'Unknown')}")
+            print(f"   Company: {contact.get('company', 'Unknown')}")
+
+
 def main():
     """Main CLI entry point"""
     setup_environment()
@@ -143,6 +212,20 @@ Examples:
     # Stats command
     subparsers.add_parser('stats', help='Show campaign statistics')
     
+    # Search auto command
+    search_auto_parser = subparsers.add_parser('search-auto', help='Search and extract emails with criteria')
+    search_auto_parser.add_argument('--title', help='Job title to search for')
+    search_auto_parser.add_argument('--keywords', help='Keywords (comma-separated)')
+    search_auto_parser.add_argument('--country', help='Country to target')
+    search_auto_parser.add_argument('--remote', action='store_true', help='Remote jobs only')
+    
+    # Search filtered command
+    search_filtered_parser = subparsers.add_parser('search-filtered', help='Search with automatic filtering')
+    search_filtered_parser.add_argument('--title', help='Job title')
+    search_filtered_parser.add_argument('--keywords', help='Keywords (comma-separated)')
+    search_filtered_parser.add_argument('--country', help='Country')
+    search_filtered_parser.add_argument('--remote', action='store_true', help='Remote only')
+    
     args = parser.parse_args()
     
     if not args.command:
@@ -160,6 +243,10 @@ Examples:
         cmd_add_template(args)
     elif args.command == 'stats':
         cmd_stats(args)
+    elif args.command == 'search-auto':
+        cmd_search_auto(args)
+    elif args.command == 'search-filtered':
+        cmd_search_filtered(args)
 
 
 if __name__ == '__main__':

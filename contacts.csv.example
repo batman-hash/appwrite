@@ -1,0 +1,11 @@
+email,name,title,company,country,department,phone
+john.doe@techstartup.com,John Doe,Junior Frontend Developer,TechStartup Inc,USA,Engineering,+1-555-123-4567
+sarah.smith@webagency.com,Sarah Smith,React Developer,WebAgency LLC,Canada,Development,+1-555-234-5678
+alex.kumar@startup.io,Alex Kumar,Junior Developer,StartUp.io,India,Engineering,
+maria.silva@devshop.br,Maria Silva,Web Developer,DevShop,Brazil,Engineering,+55-11-98765-4321
+james.wilson@frontend.co.uk,James Wilson,Senior Frontend Developer,Frontend Solutions,UK,Engineering,+44-20-7946-0958
+emily.chen@appsync.com,Emily Chen,Junior React Developer,AppSync,USA,Development,
+david.johnson@remote-dev.com,David Johnson,Full Stack Developer,RemoteDev Co,Germany,Engineering,+49-30-123-45678
+lisa.anderson@buildapp.se,Lisa Anderson,Vue.js Developer,BuildApp,Sweden,Development,
+marco.rossi@italydev.it,Marco Rossi,Junior Developer,ItalyDev,Italy,Engineering,+39-02-1234-5678
+priya.patel@indiatech.in,Priya Patel,Frontend Engineer,IndiaTech Corp,India,Engineering,

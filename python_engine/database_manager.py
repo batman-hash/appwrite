@@ -205,6 +205,32 @@ matteopennacchia43@gmail.com
         count = cursor.fetchone()[0]
         conn.close()
         return count
+    
+    def get_recent_contacts(self, limit: int = 10) -> list:
+        """Get recently added contacts"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT id, email, name, title, company, country, created_at
+            FROM contacts 
+            ORDER BY created_at DESC 
+            LIMIT ?
+        """, (limit,))
+        
+        contacts = []
+        for row in cursor.fetchall():
+            contacts.append({
+                'id': row[0],
+                'email': row[1],
+                'name': row[2],
+                'title': row[3],
+                'company': row[4],
+                'country': row[5],
+                'created_at': row[6]
+            })
+        
+        conn.close()
+        return contacts
 
 
 def initialize_db():
