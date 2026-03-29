@@ -6,15 +6,18 @@ Orchestrates email extraction, validation, and campaign sending
 import os
 import sys
 import argparse
+import sqlite3
 from pathlib import Path
+from typing import List, Tuple
 
 # Add project root to path
 sys.path.insert(0, os.path.dirname(__file__))
 
-from python_engine.email_extractor import get_email_extractor
+from python_engine.email_extractor import EmailValidator, get_email_extractor
 from python_engine.database_manager import DatabaseManager
 from python_engine.template_manager import TemplateManager
 from python_engine.auto_email_extractor import AutoEmailExtractor
+from send_test_emails import EMAIL_ALIASES, EmailSender, EmailTemplateManager
 from dotenv import load_dotenv
 
 
@@ -220,6 +223,145 @@ def cmd_import_contacts(args):
     print(f"  Needs review:  {summary['needs_review']}")
 
 
+def _collect_new_importable_emails(manager: DatabaseManager, file_path: str) -> Tuple[List[str], List[str]]:
+    """Return valid emails from the file that are not already stored in the database."""
+    path = Path(file_path)
+    if not path.exists():
+        return [], [f"File not found: {path}"]
+
+    contacts = manager._load_contacts_from_file(path)
+    if not contacts:
+        return [], ["No valid contacts found in file"]
+
+    validator = EmailValidator(
+        enable_virus_check=os.getenv('ENABLE_VIRUS_CHECK', 'true').lower() == 'true',
+        enable_source_verification=os.getenv('ENABLE_SOURCE_VERIFICATION', 'true').lower() == 'true',
+    )
+
+    candidate_emails: List[str] = []
+    errors: List[str] = []
+    seen = set()
+
+    for contact in contacts:
+        email = contact.get('email', '').strip().lower()
+        if not email or email in seen:
+            continue
+
+        is_valid, reason = validator.is_valid_email(email)
+        if not is_valid:
+            errors.append(f"{email}: {reason}")
+            continue
+
+        candidate_emails.append(email)
+        seen.add(email)
+
+    if not candidate_emails:
+        if not errors:
+            errors.append("No valid contacts found in file")
+        return [], errors
+
+    conn = sqlite3.connect(manager.db_path)
+    cursor = conn.cursor()
+    placeholders = ','.join(['?' for _ in candidate_emails])
+    cursor.execute(
+        f"SELECT email FROM contacts WHERE email IN ({placeholders})",
+        candidate_emails,
+    )
+    existing_emails = {row[0] for row in cursor.fetchall()}
+    conn.close()
+
+    importable_emails = [email for email in candidate_emails if email not in existing_emails]
+    return importable_emails, errors
+
+
+def cmd_import_send_approved(args):
+    """Import approved contacts from a file and immediately send only those new contacts."""
+    manager = DatabaseManager()
+    importable_emails, preflight_errors = _collect_new_importable_emails(manager, args.file)
+
+    imported, duplicates, errors = manager.import_contacts_file(
+        file_path=args.file,
+        source=args.source,
+        consent=1,
+    )
+
+    print(f"\n📥 Import + Send results for: {args.file}")
+    print("-" * 48)
+    print(f"Imported new: {imported}")
+    print(f"Duplicates:   {duplicates}")
+    if errors:
+        print(f"Import errors: {len(errors)}")
+        for error in errors[:10]:
+            print(f"  - {error}")
+        if len(errors) > 10:
+            print(f"  ... and {len(errors) - 10} more")
+    elif preflight_errors:
+        print(f"Preflight notes: {len(preflight_errors)}")
+        for error in preflight_errors[:10]:
+            print(f"  - {error}")
+        if len(preflight_errors) > 10:
+            print(f"  ... and {len(preflight_errors) - 10} more")
+
+    send_emails = importable_emails[:args.limit] if args.limit else importable_emails
+    if imported != len(importable_emails):
+        send_emails = send_emails[:imported]
+
+    if not send_emails:
+        print("\nℹ️  No newly imported approved contacts were available to send.")
+        print("    Only brand new emails from this file are included in this one-step send flow.")
+        return
+
+    template_manager = EmailTemplateManager()
+    template_name = args.template or template_manager.get_default_template_name()
+    if not template_name:
+        print("\n❌ No default template is configured.")
+        return
+
+    subject, body = template_manager.get_template(template_name)
+    if not subject or not body:
+        print(f"\n❌ Template '{template_name}' was not found.")
+        return
+
+    preview = template_manager.preview_template(name=template_name, to_email=send_emails[0])
+    from_name = EMAIL_ALIASES.get(template_name, 'DevNavigator Team')
+
+    print(f"\n📧 Ready to send to {len(send_emails)} newly imported contact(s)")
+    print(f"Template:      {template_name}")
+    print(f"Sender name:   {from_name}")
+    print(f"Register link: {preview['register_link'] or 'not set'}")
+    print(f"Preview email: {send_emails[0]}")
+    print("-" * 48)
+    print(f"Subject: {preview['subject']}")
+    print()
+    print(preview['body'][:700])
+    if len(preview['body']) > 700:
+        print("\n... preview truncated ...")
+
+    if not args.dry_run and not args.yes:
+        confirm = input("\n⚠️  This will send REAL emails to the new imported contacts. Continue? (yes/no): ").strip().lower()
+        if confirm != 'yes':
+            print("✗ Cancelled")
+            return
+
+    sender = EmailSender()
+    sent, failed = sender.send_batch(
+        subject,
+        body,
+        limit=len(send_emails),
+        dry_run=args.dry_run,
+        from_name=from_name,
+        emails=send_emails,
+        template_name=template_name,
+    )
+
+    print("\n✅ Import + send complete!")
+    print(f"   Sent:   {sent}")
+    print(f"   Failed: {failed}")
+    summary = manager.get_queue_summary()
+    print(f"   Ready to send now: {summary['ready_to_send']}")
+    print(f"   Sent total:        {summary['sent_count']}")
+
+
 def cmd_search_auto(args):
     """Automatically search and extract emails from internet with specific criteria"""
     extractor = AutoEmailExtractor()
@@ -350,6 +492,17 @@ Examples:
     import_parser.add_argument('--consent', action='store_true',
                                help='Mark imported contacts as approved/sendable')
 
+    import_send_parser = subparsers.add_parser(
+        'import-send-approved',
+        help='Import approved contacts from a file and send only the newly imported ones',
+    )
+    import_send_parser.add_argument('--file', required=True, help='Path to CSV or text file')
+    import_send_parser.add_argument('--source', default='approved_csv', help='Source label stored in the database')
+    import_send_parser.add_argument('--template', help='Template to send after import')
+    import_send_parser.add_argument('--limit', type=int, help='Maximum number of newly imported contacts to send')
+    import_send_parser.add_argument('--dry-run', action='store_true', help='Preview the send without emailing')
+    import_send_parser.add_argument('--yes', action='store_true', help='Skip confirmation before sending')
+
     archive_parser = subparsers.add_parser('archive-contacts', help='Archive contacts from active queue views')
     archive_parser.add_argument('--sent', action='store_true', help='Archive all sent contacts')
     archive_parser.add_argument('--all', action='store_true', help='Archive all active contacts')
@@ -398,6 +551,8 @@ Examples:
         cmd_queue(args)
     elif args.command == 'import-contacts':
         cmd_import_contacts(args)
+    elif args.command == 'import-send-approved':
+        cmd_import_send_approved(args)
     elif args.command == 'archive-contacts':
         cmd_archive_contacts(args)
     elif args.command == 'unarchive-contacts':
