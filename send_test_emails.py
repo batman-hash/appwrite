@@ -71,8 +71,23 @@ class EmailSender:
     """Send test emails"""
     
     def __init__(self):
-        self.smtp_server = os.getenv('SMTP_URL', 'smtp.gmail.com:587').split('://')[-1]
-        self.port = 587
+        # Parse SMTP URL: smtp://server:port or just server:port
+        smtp_url = os.getenv('SMTP_URL', 'smtp.gmail.com:587')
+        if '://' in smtp_url:
+            smtp_url = smtp_url.split('://')[-1]
+        
+        # Split server and port
+        if ':' in smtp_url:
+            self.smtp_server, port_str = smtp_url.rsplit(':', 1)
+            try:
+                self.port = int(port_str)
+            except:
+                self.smtp_server = smtp_url
+                self.port = 587
+        else:
+            self.smtp_server = smtp_url
+            self.port = 587
+        
         self.username = os.getenv('SMTP_USERNAME', '')
         self.password = os.getenv('SMTP_PASSWORD', '')
         self.from_email = os.getenv('SMTP_FROM', self.username)
