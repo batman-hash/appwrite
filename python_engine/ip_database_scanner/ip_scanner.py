@@ -2,11 +2,16 @@
 IP Scanner Module
 
 Provides IP range scanning capabilities for discovering exposed databases.
+
+WARNING: This module is for authorized security assessment only.
+Unauthorized network scanning is illegal in most jurisdictions.
+Only scan networks you own or have explicit permission to scan.
 """
 
 import socket
 import ipaddress
 import concurrent.futures
+import sys
 from typing import List, Dict, Any, Optional, Tuple
 from dataclasses import dataclass
 from datetime import datetime
@@ -26,15 +31,19 @@ class ScanResult:
 class IPScanner:
     """
     IP range scanner for discovering exposed databases and services.
-    
+
     Features:
     - Scan IP ranges for open ports
     - Detect common database ports
     - Multi-threaded scanning
     - Service identification
     - Banner grabbing
+
+    WARNING: This module is for authorized security assessment only.
+    Unauthorized network scanning is illegal in most jurisdictions.
+    Only scan networks you own or have explicit permission to scan.
     """
-    
+
     # Common database ports
     DATABASE_PORTS = {
         27017: 'MongoDB',
@@ -63,7 +72,7 @@ class IPScanner:
         28015: 'RethinkDB',
         29015: 'RethinkDB (Cluster)',
     }
-    
+
     # Common web ports
     WEB_PORTS = {
         80: 'HTTP',
@@ -75,7 +84,7 @@ class IPScanner:
         8000: 'Django/Python',
         8888: 'Jupyter Notebook',
     }
-    
+
     def __init__(
         self,
         timeout: float = 1.0,
@@ -83,7 +92,7 @@ class IPScanner:
     ):
         """
         Initialize IP scanner.
-        
+
         Args:
             timeout: Socket timeout in seconds
             max_workers: Maximum number of concurrent workers
@@ -91,7 +100,45 @@ class IPScanner:
         self.timeout = timeout
         self.max_workers = max_workers
         self.results: List[ScanResult] = []
-    
+        self._disclaimer_shown = False
+
+    def _show_disclaimer(self):
+        """Show legal disclaimer for network scanning"""
+        if not self._disclaimer_shown:
+            print("\n" + "="*70)
+            print("WARNING: NETWORK SCANNING LEGAL DISCLAIMER")
+            print("="*70)
+            print("This tool is for AUTHORIZED security assessment ONLY.")
+            print("Unauthorized network scanning is ILLEGAL in most jurisdictions.")
+            print("")
+            print("You must have EXPLICIT PERMISSION to scan any network.")
+            print("Only scan networks you OWN or have WRITTEN AUTHORIZATION to scan.")
+            print("")
+            print("Violations may result in:")
+            print("  - Criminal prosecution under computer fraud laws")
+            print("  - Civil liability for damages")
+            print("  - Termination of employment or academic standing")
+            print("")
+            print("By using this tool, you acknowledge that you have proper authorization.")
+            print("="*70 + "\n")
+            self._disclaimer_shown = True
+
+    def _confirm_authorization(self) -> bool:
+        """
+        Confirm user has authorization to scan the network.
+
+        Returns:
+            True if user confirms authorization
+        """
+        self._show_disclaimer()
+
+        try:
+            response = input("Do you have authorization to scan this network? (yes/no): ")
+            return response.lower() in ['yes', 'y']
+        except (EOFError, KeyboardInterrupt):
+            print("\nOperation cancelled.")
+            return False
+
     def scan_port(
         self,
         ip: str,
@@ -100,23 +147,23 @@ class IPScanner:
     ) -> ScanResult:
         """
         Scan a single IP:port combination.
-        
+
         Args:
             ip: IP address to scan
             port: Port number to scan
             grab_banner: Whether to grab service banner
-            
+
         Returns:
             ScanResult object
         """
         start_time = datetime.now()
-        
+
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.settimeout(self.timeout)
-            
+
             result = sock.connect_ex((ip, port))
-            
+
             if result == 0:
                 # Port is open
                 banner = None
@@ -126,14 +173,14 @@ class IPScanner:
                         banner = sock.recv(1024).decode('utf-8', errors='ignore')
                     except:
                         pass
-                
+
                 response_time = (datetime.now() - start_time).total_seconds()
-                
+
                 # Identify service
                 service = self._identify_service(port, banner)
-                
+
                 sock.close()
-                
+
                 return ScanResult(
                     ip=ip,
                     port=port,
@@ -149,7 +196,7 @@ class IPScanner:
                     port=port,
                     is_open=False
                 )
-                
+
         except socket.timeout:
             return ScanResult(
                 ip=ip,
@@ -162,7 +209,7 @@ class IPScanner:
                 port=port,
                 is_open=False
             )
-    
+
     def _identify_service(
         self,
         port: int,
@@ -170,22 +217,22 @@ class IPScanner:
     ) -> str:
         """
         Identify service based on port and banner.
-        
+
         Args:
             port: Port number
             banner: Service banner
-            
+
         Returns:
             Service name
         """
         # Check database ports
         if port in self.DATABASE_PORTS:
             return self.DATABASE_PORTS[port]
-        
+
         # Check web ports
         if port in self.WEB_PORTS:
             return self.WEB_PORTS[port]
-        
+
         # Try to identify from banner
         if banner:
             banner_lower = banner.lower()
@@ -201,31 +248,38 @@ class IPScanner:
                 return 'PostgreSQL'
             elif 'http' in banner_lower:
                 return 'HTTP'
-        
+
         return 'Unknown'
-    
+
     def scan_ip_range(
         self,
         ip_range: str,
         ports: Optional[List[int]] = None,
         grab_banner: bool = False,
-        only_open: bool = True
+        only_open: bool = True,
+        confirm: bool = True
     ) -> List[ScanResult]:
         """
         Scan an IP range for open ports.
-        
+
         Args:
             ip_range: IP range in CIDR notation (e.g., '192.168.1.0/24')
             ports: List of ports to scan (default: common database ports)
             grab_banner: Whether to grab service banners
             only_open: Whether to return only open ports
-            
+            confirm: Whether to ask for authorization confirmation (default: True)
+
         Returns:
             List of ScanResult objects
         """
+        # Ask for authorization confirmation
+        if confirm and not self._confirm_authorization():
+            print("Network scanning cancelled - authorization not confirmed.")
+            return []
+
         if ports is None:
             ports = list(self.DATABASE_PORTS.keys())
-        
+
         # Parse IP range
         try:
             network = ipaddress.ip_network(ip_range, strict=False)
@@ -233,13 +287,13 @@ class IPScanner:
         except ValueError as e:
             print(f"Invalid IP range: {e}")
             return []
-        
+
         # Create scan tasks
         tasks = []
         for ip in ips:
             for port in ports:
                 tasks.append((ip, port))
-        
+
         # Scan with thread pool
         results = []
         with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
@@ -247,45 +301,52 @@ class IPScanner:
                 executor.submit(self.scan_port, ip, port, grab_banner): (ip, port)
                 for ip, port in tasks
             }
-            
+
             for future in concurrent.futures.as_completed(future_to_task):
                 result = future.result()
                 if only_open and result.is_open:
                     results.append(result)
                 elif not only_open:
                     results.append(result)
-        
+
         self.results = results
         return results
-    
+
     def scan_ip_list(
         self,
         ips: List[str],
         ports: Optional[List[int]] = None,
         grab_banner: bool = False,
-        only_open: bool = True
+        only_open: bool = True,
+        confirm: bool = True
     ) -> List[ScanResult]:
         """
         Scan a list of IP addresses.
-        
+
         Args:
             ips: List of IP addresses
             ports: List of ports to scan
             grab_banner: Whether to grab service banners
             only_open: Whether to return only open ports
-            
+            confirm: Whether to ask for authorization confirmation (default: True)
+
         Returns:
             List of ScanResult objects
         """
+        # Ask for authorization confirmation
+        if confirm and not self._confirm_authorization():
+            print("Network scanning cancelled - authorization not confirmed.")
+            return []
+
         if ports is None:
             ports = list(self.DATABASE_PORTS.keys())
-        
+
         # Create scan tasks
         tasks = []
         for ip in ips:
             for port in ports:
                 tasks.append((ip, port))
-        
+
         # Scan with thread pool
         results = []
         with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
@@ -293,50 +354,57 @@ class IPScanner:
                 executor.submit(self.scan_port, ip, port, grab_banner): (ip, port)
                 for ip, port in tasks
             }
-            
+
             for future in concurrent.futures.as_completed(future_to_task):
                 result = future.result()
                 if only_open and result.is_open:
                     results.append(result)
                 elif not only_open:
                     results.append(result)
-        
+
         self.results = results
         return results
-    
+
     def scan_single_ip(
         self,
         ip: str,
         ports: Optional[List[int]] = None,
-        grab_banner: bool = False
+        grab_banner: bool = False,
+        confirm: bool = True
     ) -> List[ScanResult]:
         """
         Scan a single IP address.
-        
+
         Args:
             ip: IP address to scan
             ports: List of ports to scan
             grab_banner: Whether to grab service banners
-            
+            confirm: Whether to ask for authorization confirmation (default: True)
+
         Returns:
             List of ScanResult objects
         """
+        # Ask for authorization confirmation
+        if confirm and not self._confirm_authorization():
+            print("Network scanning cancelled - authorization not confirmed.")
+            return []
+
         if ports is None:
             ports = list(self.DATABASE_PORTS.keys())
-        
+
         results = []
         for port in ports:
             result = self.scan_port(ip, port, grab_banner)
             if result.is_open:
                 results.append(result)
-        
+
         self.results = results
         return results
-    
+
     def get_database_services(self) -> List[ScanResult]:
         """
         Get only database services from scan results.
-        
+
         Returns:
             List of ScanResult objects for database services
         """
@@ -344,11 +412,11 @@ class IPScanner:
             result for result in self.results
             if result.service in self.DATABASE_PORTS.values()
         ]
-    
+
     def get_web_services(self) -> List[ScanResult]:
         """
         Get only web services from scan results.
-        
+
         Returns:
             List of ScanResult objects for web services
         """
@@ -356,38 +424,38 @@ class IPScanner:
             result for result in self.results
             if result.service in self.WEB_PORTS.values()
         ]
-    
+
     def get_stats(self) -> Dict[str, Any]:
         """
         Get scan statistics.
-        
+
         Returns:
             Dictionary containing scan statistics
         """
         total_scanned = len(self.results)
         open_ports = sum(1 for r in self.results if r.is_open)
-        
+
         services = {}
         for result in self.results:
             if result.service:
                 services[result.service] = services.get(result.service, 0) + 1
-        
+
         return {
             'total_scanned': total_scanned,
             'open_ports': open_ports,
             'closed_ports': total_scanned - open_ports,
             'services': services,
         }
-    
+
     def export_results(self, filename: str):
         """
         Export scan results to file.
-        
+
         Args:
             filename: Output filename
         """
         import json
-        
+
         export_data = []
         for result in self.results:
             export_data.append({
@@ -398,8 +466,8 @@ class IPScanner:
                 'response_time': result.response_time,
                 'banner': result.banner,
             })
-        
+
         with open(filename, 'w') as f:
             json.dump(export_data, f, indent=2)
-        
+
         print(f"Exported {len(export_data)} results to {filename}")

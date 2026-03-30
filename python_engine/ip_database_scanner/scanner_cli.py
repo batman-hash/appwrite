@@ -2,6 +2,9 @@
 Scanner CLI Interface
 
 Command-line interface for IP database scanning and email extraction.
+
+WARNING: This module is for authorized security assessment only.
+Unauthorized access to computer systems is illegal under the CFAA and similar laws.
 """
 
 import argparse
@@ -19,20 +22,22 @@ from .security_assessor import SecurityAssessor
 from .metasploit_integration import MetasploitIntegration
 from .nmap_integration import NmapIntegration
 from .tshark_integration import TSharkIntegration
-from .vulnerability_exploiter import VulnerabilityExploiter
 
 
 class ScannerCLI:
     """
     Command-line interface for IP database scanning.
-    
+
     Features:
     - Scan IP ranges for exposed databases
     - Extract emails from discovered databases
     - Assess security vulnerabilities
     - Export results to JSON
+
+    WARNING: This module is for authorized security assessment only.
+    Unauthorized access to computer systems is illegal under the CFAA and similar laws.
     """
-    
+
     def __init__(self):
         """Initialize scanner CLI"""
         self.scanner = IPScanner()
@@ -44,12 +49,11 @@ class ScannerCLI:
         self.metasploit = MetasploitIntegration()
         self.nmap = NmapIntegration()
         self.tshark = TSharkIntegration()
-        self.exploiter = VulnerabilityExploiter()
-    
+
     def create_parser(self) -> argparse.ArgumentParser:
         """
         Create command-line argument parser.
-        
+
         Returns:
             Configured argument parser
         """
@@ -58,41 +62,41 @@ class ScannerCLI:
             description='IP Database Scanner - Discover and extract emails from exposed databases',
             formatter_class=argparse.RawDescriptionHelpFormatter,
             epilog="""
+WARNING: This tool is for authorized security assessment only.
+Unauthorized access to computer systems is illegal under the CFAA and similar laws.
+
 Examples:
   # Scan IP range for databases
   ip-scanner scan --range 192.168.1.0/24
-  
+
   # Scan specific IP
   ip-scanner scan --ip 192.168.1.100
-  
+
   # Extract emails from MongoDB
   ip-scanner extract --type mongodb --ip 192.168.1.100
-  
+
   # Extract emails from Elasticsearch
   ip-scanner extract --type elasticsearch --ip 192.168.1.100
-  
+
   # Extract emails from Redis
   ip-scanner extract --type redis --ip 192.168.1.100
-  
+
   # Assess security
   ip-scanner assess --type mongodb --ip 192.168.1.100
-  
+
   # Full scan and extract
   ip-scanner full-scan --range 192.168.1.0/24
-  
-  # Exploit vulnerable database
-  ip-scanner exploit --type mongodb --ip 192.168.1.100
-  
+
   # Scan with Nmap
   ip-scanner nmap-scan --ip 192.168.1.100
-  
+
   # Capture packets with TShark
   ip-scanner tshark-capture --interface eth0 --count 100
             """
         )
-        
+
         subparsers = parser.add_subparsers(dest='command', help='Command to execute')
-        
+
         # Scan command
         scan_parser = subparsers.add_parser(
             'scan',
@@ -131,7 +135,7 @@ Examples:
             action='store_true',
             help='Verbose output'
         )
-        
+
         # Extract command
         extract_parser = subparsers.add_parser(
             'extract',
@@ -178,7 +182,7 @@ Examples:
             action='store_true',
             help='Verbose output'
         )
-        
+
         # Assess command
         assess_parser = subparsers.add_parser(
             'assess',
@@ -209,7 +213,7 @@ Examples:
             action='store_true',
             help='Verbose output'
         )
-        
+
         # Full scan command
         full_scan_parser = subparsers.add_parser(
             'full-scan',
@@ -242,38 +246,7 @@ Examples:
             action='store_true',
             help='Verbose output'
         )
-        
-        # Exploit command
-        exploit_parser = subparsers.add_parser(
-            'exploit',
-            help='Exploit vulnerable databases to extract emails'
-        )
-        exploit_parser.add_argument(
-            '--type', '-T',
-            choices=['mongodb', 'elasticsearch', 'redis', 'mysql', 'postgresql'],
-            required=True,
-            help='Database type'
-        )
-        exploit_parser.add_argument(
-            '--ip', '-i',
-            required=True,
-            help='Database IP address'
-        )
-        exploit_parser.add_argument(
-            '--port', '-p',
-            type=int,
-            help='Database port (default: auto-detect)'
-        )
-        exploit_parser.add_argument(
-            '--output', '-o',
-            help='Output JSON filename'
-        )
-        exploit_parser.add_argument(
-            '--verbose', '-v',
-            action='store_true',
-            help='Verbose output'
-        )
-        
+
         # Nmap scan command
         nmap_parser = subparsers.add_parser(
             'nmap-scan',
@@ -303,7 +276,7 @@ Examples:
             action='store_true',
             help='Verbose output'
         )
-        
+
         # TShark capture command
         tshark_parser = subparsers.add_parser(
             'tshark-capture',
@@ -339,24 +312,24 @@ Examples:
             action='store_true',
             help='Verbose output'
         )
-        
+
         return parser
-    
+
     def cmd_scan(self, args):
         """
         Execute scan command.
-        
+
         Args:
             Parsed command-line arguments
         """
         try:
             print(f"Starting IP scan...")
-            
+
             # Parse ports
             ports = None
             if args.ports:
                 ports = [int(p.strip()) for p in args.ports.split(',')]
-            
+
             # Scan IP range or single IP
             if args.range:
                 print(f"Scanning IP range: {args.range}")
@@ -375,12 +348,12 @@ Examples:
             else:
                 print("Error: Either --range or --ip must be specified")
                 sys.exit(1)
-            
+
             # Print results
             print(f"\n{'='*60}")
             print("Scan Results")
             print(f"{'='*60}")
-            
+
             for result in results:
                 if result.is_open:
                     print(f"\nIP: {result.ip}")
@@ -390,7 +363,7 @@ Examples:
                         print(f"Response Time: {result.response_time:.3f}s")
                     if result.banner and args.verbose:
                         print(f"Banner: {result.banner[:100]}...")
-            
+
             # Print statistics
             stats = self.scanner.get_stats()
             print(f"\n{'='*60}")
@@ -399,31 +372,31 @@ Examples:
             print(f"Total scanned: {stats['total_scanned']}")
             print(f"Open ports: {stats['open_ports']}")
             print(f"Closed ports: {stats['closed_ports']}")
-            
+
             if stats['services']:
                 print(f"\nServices found:")
                 for service, count in stats['services'].items():
                     print(f"  {service}: {count}")
-            
+
             # Export results
             if args.output:
                 self.scanner.export_results(args.output)
                 print(f"\nResults exported to: {args.output}")
-            
+
         except Exception as e:
             print(f"Error: {e}", file=sys.stderr)
             sys.exit(1)
-    
+
     def cmd_extract(self, args):
         """
         Execute extract command.
-        
+
         Args:
             Parsed command-line arguments
         """
         try:
             print(f"Extracting emails from {args.type.upper()} at {args.ip}...")
-            
+
             # Set default port if not specified
             port = args.port
             if port is None:
@@ -433,10 +406,10 @@ Examples:
                     port = 9200
                 elif args.type == 'redis':
                     port = 6379
-            
+
             # Extract emails based on database type
             results = []
-            
+
             if args.type == 'mongodb':
                 results = self.mongodb_extractor.extract_emails(
                     ip=args.ip,
@@ -460,14 +433,14 @@ Examples:
                     port=port,
                     password=args.password
                 )
-            
+
             # Print results
             print(f"\n{'='*60}")
             print("Extraction Results")
             print(f"{'='*60}")
-            
+
             all_emails = []
-            
+
             for result in results:
                 print(f"\nDatabase: {getattr(result, 'database', getattr(result, 'index', 'N/A'))}")
                 if hasattr(result, 'collection'):
@@ -476,22 +449,22 @@ Examples:
                 print(f"Documents scanned: {result.total_documents}")
                 print(f"Documents with emails: {result.documents_with_emails}")
                 print(f"Extraction time: {result.extraction_time:.2f}s")
-                
+
                 if args.verbose and result.emails:
                     print(f"\nEmails:")
                     for email in result.emails[:10]:  # Show first 10
                         print(f"  {email}")
                     if len(result.emails) > 10:
                         print(f"  ... and {len(result.emails) - 10} more")
-                
+
                 all_emails.extend(result.emails)
-            
+
             # Remove duplicates
             all_emails = list(set(all_emails))
-            
+
             print(f"\n{'='*60}")
             print(f"Total unique emails found: {len(all_emails)}")
-            
+
             # Export results
             if args.output:
                 export_data = []
@@ -506,26 +479,26 @@ Examples:
                         'documents_with_emails': result.documents_with_emails,
                         'extraction_time': result.extraction_time,
                     })
-                
+
                 with open(args.output, 'w') as f:
                     json.dump(export_data, f, indent=2)
-                
+
                 print(f"\nResults exported to: {args.output}")
-            
+
         except Exception as e:
             print(f"Error: {e}", file=sys.stderr)
             sys.exit(1)
-    
+
     def cmd_assess(self, args):
         """
         Execute assess command.
-        
+
         Args:
             Parsed command-line arguments
         """
         try:
             print(f"Assessing security of {args.type.upper()} at {args.ip}...")
-            
+
             # Set default port if not specified
             port = args.port
             if port is None:
@@ -535,10 +508,10 @@ Examples:
                     port = 9200
                 elif args.type == 'redis':
                     port = 6379
-            
+
             # Assess security based on database type
             assessment = None
-            
+
             if args.type == 'mongodb':
                 assessment = self.security_assessor.assess_mongodb(
                     ip=args.ip,
@@ -554,7 +527,7 @@ Examples:
                     ip=args.ip,
                     port=port
                 )
-            
+
             # Print results
             print(f"\n{'='*60}")
             print("Security Assessment")
@@ -565,10 +538,10 @@ Examples:
             print(f"Security Score: {assessment.security_score}/100")
             print(f"Risk Level: {assessment.risk_level}")
             print(f"Assessment Time: {assessment.assessment_time:.2f}s")
-            
+
             if assessment.vulnerabilities:
                 print(f"\nVulnerabilities found: {len(assessment.vulnerabilities)}")
-                
+
                 for vuln in assessment.vulnerabilities:
                     print(f"\n  [{vuln.level.value.upper()}] {vuln.name}")
                     print(f"    Description: {vuln.description}")
@@ -577,7 +550,7 @@ Examples:
                         print(f"    Evidence: {vuln.evidence}")
             else:
                 print("\nNo vulnerabilities found.")
-            
+
             # Export results
             if args.output:
                 export_data = {
@@ -598,34 +571,34 @@ Examples:
                         for v in assessment.vulnerabilities
                     ],
                 }
-                
+
                 with open(args.output, 'w') as f:
                     json.dump(export_data, f, indent=2)
-                
+
                 print(f"\nResults exported to: {args.output}")
-            
+
         except Exception as e:
             print(f"Error: {e}", file=sys.stderr)
             sys.exit(1)
-    
+
     def cmd_full_scan(self, args):
         """
         Execute full scan command.
-        
+
         Args:
             Parsed command-line arguments
         """
         try:
             print("Starting full scan...")
-            
+
             # Parse ports
             ports = None
             if args.ports:
                 ports = [int(p.strip()) for p in args.ports.split(',')]
-            
+
             # Scan for databases
             print("\n[1/3] Scanning for exposed databases...")
-            
+
             if args.range:
                 scan_results = self.scanner.scan_ip_range(
                     ip_range=args.range,
@@ -641,21 +614,21 @@ Examples:
             else:
                 print("Error: Either --range or --ip must be specified")
                 sys.exit(1)
-            
+
             # Get database services
             db_services = self.scanner.get_database_services()
-            
+
             print(f"Found {len(db_services)} database services")
-            
+
             # Extract emails from each database
             print("\n[2/3] Extracting emails from databases...")
-            
+
             all_emails = []
             extraction_results = []
-            
+
             for service in db_services:
                 print(f"\nExtracting from {service.service} at {service.ip}:{service.port}...")
-                
+
                 try:
                     if service.service == 'MongoDB':
                         results = self.mongodb_extractor.extract_emails(
@@ -674,27 +647,27 @@ Examples:
                         )
                     else:
                         continue
-                    
+
                     extraction_results.extend(results)
-                    
+
                     for result in results:
                         all_emails.extend(result.emails)
-                        
+
                 except Exception as e:
                     print(f"  Error: {e}")
                     continue
-            
+
             # Remove duplicates
             all_emails = list(set(all_emails))
-            
+
             # Assess security
             print("\n[3/3] Assessing security...")
-            
+
             assessments = []
-            
+
             for service in db_services:
                 print(f"\nAssessing {service.service} at {service.ip}:{service.port}...")
-                
+
                 try:
                     if service.service == 'MongoDB':
                         assessment = self.security_assessor.assess_mongodb(
@@ -713,13 +686,13 @@ Examples:
                         )
                     else:
                         continue
-                    
+
                     assessments.append(assessment)
-                    
+
                 except Exception as e:
                     print(f"  Error: {e}")
                     continue
-            
+
             # Print summary
             print(f"\n{'='*60}")
             print("Full Scan Summary")
@@ -727,11 +700,11 @@ Examples:
             print(f"Databases found: {len(db_services)}")
             print(f"Total unique emails: {len(all_emails)}")
             print(f"Security assessments: {len(assessments)}")
-            
+
             if assessments:
                 avg_score = sum(a.security_score for a in assessments) / len(assessments)
                 print(f"Average security score: {avg_score:.1f}/100")
-            
+
             # Export results
             if args.output:
                 export_data = {
@@ -772,25 +745,25 @@ Examples:
                         for a in assessments
                     ],
                 }
-                
+
                 with open(args.output, 'w') as f:
                     json.dump(export_data, f, indent=2)
-                
+
                 print(f"\nResults exported to: {args.output}")
-            
+
         except Exception as e:
             print(f"Error: {e}", file=sys.stderr)
             sys.exit(1)
-    
+
     def main(self):
         """Main CLI entry point"""
         parser = self.create_parser()
         args = parser.parse_args()
-        
+
         if not args.command:
             parser.print_help()
             sys.exit(0)
-        
+
         # Execute command
         if args.command == 'scan':
             self.cmd_scan(args)
