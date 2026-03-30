@@ -1,0 +1,17 @@
+services:
+  webapp:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: cyberghost-webapp
+    env_file:
+      - ../.env
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8011
+      - DEBUG=true
+    ports:
+      - "8011:8011"
+    volumes:
+      - ../user.db:/app/user.db
+      - ../frontend1:/app/frontend

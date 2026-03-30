@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CYBERGHOST - MUSIC NERVES</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      min-height: 100vh;
+      font-family: 'Orbitron', sans-serif;
+      background:
+        radial-gradient(circle at top, rgba(255, 0, 255, 0.16), transparent 30%),
+        linear-gradient(180deg, #05070d 0%, #070b14 50%, #030406 100%);
+      color: #e7edf3;
+    }
+
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      display: flex;
+      justify-content: center;
+      gap: 28px;
+      padding: 18px;
+      background: rgba(0, 0, 0, 0.82);
+      border-bottom: 1px solid rgba(0, 255, 255, 0.18);
+      backdrop-filter: blur(10px);
+    }
+
+    nav a {
+      color: #0ff;
+      text-decoration: none;
+      font-size: 0.86em;
+      letter-spacing: 2px;
+    }
+
+    nav a.active { color: #f0f; }
+
+    .page {
+      width: min(1100px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 54px 0 70px;
+    }
+
+    header {
+      padding: 26px 0 22px;
+      text-align: center;
+    }
+
+    h1 {
+      font-size: clamp(2rem, 4vw, 3.2rem);
+      background: linear-gradient(135deg, #f0f, #0ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    header p {
+      margin-top: 12px;
+      color: #98a7b3;
+      font-size: 0.88em;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    .panel {
+      background: rgba(9, 14, 26, 0.88);
+      border: 1px solid rgba(0, 255, 255, 0.18);
+      border-radius: 18px;
+      padding: 26px;
+      margin-bottom: 20px;
+      box-shadow: 0 0 32px rgba(0, 255, 255, 0.06);
+    }
+
+    .panel h2 {
+      color: #0ff;
+      font-size: 1.02em;
+      letter-spacing: 2px;
+      margin-bottom: 14px;
+    }
+
+    .panel p, .panel li {
+      color: #a8b3bd;
+      line-height: 1.7;
+      font-size: 0.88em;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+    }
+
+    .card {
+      padding: 18px;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 0, 255, 0.22);
+      background: rgba(0, 0, 0, 0.26);
+    }
+
+    .card h3 {
+      color: #f0f;
+      font-size: 0.86em;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+    }
+
+    ul {
+      list-style: none;
+      display: grid;
+      gap: 10px;
+    }
+
+    .cta {
+      display: inline-block;
+      margin-top: 12px;
+      padding: 10px 18px;
+      border-radius: 999px;
+      border: 1px solid #0ff;
+      color: #0ff;
+      text-decoration: none;
+      font-size: 0.78em;
+      letter-spacing: 1px;
+    }
+
+    @media (max-width: 700px) {
+      nav { gap: 12px; flex-wrap: wrap; }
+      .page { width: min(100% - 20px, 1100px); padding-top: 30px; }
+      .panel { padding: 20px; }
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="index.html">HOME</a>
+    <a href="room.html" class="active">THE ROOM</a>
+    <a href="producer_styles.html">PRODUCER STYLES</a>
+    <a href="contact.html">CONTACT</a>
+  </nav>
+
+  <main class="page">
+    <header>
+      <h1>MUSIC NERVES</h1>
+      <p>The sounds, moments, and textures that hit your spine first</p>
+    </header>
+
+    <section class="panel">
+      <h2>// DISCUSSION TOPIC</h2>
+      <p>
+        This page is the starter space for talking about emotional impact in music:
+        drops, buildups, vocal moments, bass pressure, silence before impact, and the small details
+        that make a track unforgettable.
+      </p>
+      <a class="cta" href="room.html">BACK TO THE ROOM</a>
+    </section>
+
+    <section class="panel">
+      <h2>// STARTER PROMPTS</h2>
+      <div class="grid">
+        <article class="card">
+          <h3>DROP MOMENTS</h3>
+          <p>Which drop still gives you chills, and what exactly makes it work?</p>
+        </article>
+        <article class="card">
+          <h3>VOCAL IMPACT</h3>
+          <p>Talk about a vocal line, whisper, chop, or phrase that changes everything.</p>
+        </article>
+        <article class="card">
+          <h3>SOUND DESIGN</h3>
+          <p>Name the synth, texture, or bass movement that feels physically powerful to you.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>// WHAT USERS CAN POST HERE</h2>
+      <ul>
+        <li>Favorite emotional drops and timestamps.</li>
+        <li>Tracks that feel cinematic, dark, nostalgic, or euphoric.</li>
+        <li>Production choices that create tension and release.</li>
+        <li>Short reviews about what a section makes you feel.</li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>
