@@ -31,6 +31,24 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+CLOUDFLARE_MODES = {
+    "default": {
+        "primary_dns": "1.1.1.1",
+        "secondary_dns": "1.0.0.1",
+        "doh": "https://cloudflare-dns.com/dns-query",
+    },
+    "malware_blocking": {
+        "primary_dns": "1.1.1.2",
+        "secondary_dns": "1.0.0.2",
+        "doh": "https://security.cloudflare-dns.com/dns-query",
+    },
+    "malware_and_adult_blocking": {
+        "primary_dns": "1.1.1.3",
+        "secondary_dns": "1.0.0.3",
+        "doh": "https://family.cloudflare-dns.com/dns-query",
+    },
+}
+
 
 @dataclass
 class NetworkDevice:
