@@ -4,7 +4,7 @@
 << /Type /Catalog /Pages 2 0 R >>
 endobj
 2 0 obj
-<< /Type /Pages /Kids [4 0 R 6 0 R 8 0 R 10 0 R 12 0 R 14 0 R] /Count 6 >>
+<< /Type /Pages /Kids [4 0 R 6 0 R 8 0 R 10 0 R 12 0 R 14 0 R 16 0 R 18 0 R 20 0 R] /Count 9 >>
 endobj
 3 0 obj
 << /Type /Font /Subtype /Type1 /BaseFont /Courier >>
@@ -13,7 +13,7 @@ endobj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 5 0 R >>
 endobj
 5 0 obj
-<< /Length 1704 >>
+<< /Length 1745 >>
 stream
 BT
 /F1 10 Tf
@@ -58,6 +58,46 @@ T* () Tj
 T* (Comment:) Tj
 T* (Use this once before running extraction, import, or verification commands on a new database.) Tj
 T* () Tj
+T* (VS CODE TASKS) Tj
+T* (-------------) Tj
+T* () Tj
+T* (Open the Command Palette in VS Code and run a task from .vscode/tasks.json. The most useful) Tj
+T* (ones are:) Tj
+T* () Tj
+T* (- DevNavigator: Crawl Emails) Tj
+T* (- DevNavigator: Crawl Emails \(Store\)) Tj
+T* (- DevNavigator: Crawl Emails \(World Store\)) Tj
+ET
+endstream
+endobj
+6 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 7 0 R >>
+endobj
+7 0 obj
+<< /Length 2014 >>
+stream
+BT
+/F1 10 Tf
+14 TL
+1 0 0 1 50 742 Tm
+(- DevNavigator: Search Deliver \(Dry Run\)) Tj
+T* (- DevNavigator: List Stored Search Emails) Tj
+T* (- DevNavigator: Search Guard) Tj
+T* (- DevNavigator: Extract Emails From File) Tj
+T* (- DevNavigator: Build C++ Sender) Tj
+T* () Tj
+T* (The same flows are also available through npm:) Tj
+T* () Tj
+T* (    npm run crawl:emails -- "frontend developer" "react,javascript" all remote 10) Tj
+T* (    npm run crawl:emails:store -- "frontend developer" "react,javascript" all remote 10) Tj
+T* (    npm run crawl:emails:world -- "frontend developer" "react,javascript" remote 10) Tj
+T* (    npm run search:deliver:dry-run -- --title "frontend developer" --keywords) Tj
+T* (    "react,javascript" --country all --remote) Tj
+T* (    npm run search:list:emails) Tj
+T* (    npm run search:guard:warn) Tj
+T* (    npm run build:sender) Tj
+T* () Tj
+T* () Tj
 T* (DOCKER WORKFLOW) Tj
 T* (---------------) Tj
 T* () Tj
@@ -67,20 +107,7 @@ T* () Tj
 T* () Tj
 T* (    # Show the CLI help from inside Docker) Tj
 T* (    docker run --rm -it -v "$\(pwd\):/workspace" devnavigator) Tj
-ET
-endstream
-endobj
-6 0 obj
-<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 7 0 R >>
-endobj
-7 0 obj
-<< /Length 1942 >>
-stream
-BT
-/F1 10 Tf
-14 TL
-1 0 0 1 50 742 Tm
-() Tj
+T* () Tj
 T* () Tj
 T* (    # Initialize the database in the mounted project folder) Tj
 T* (    docker run --rm -it -v "$\(pwd\):/workspace" devnavigator init-db) Tj
@@ -101,9 +128,34 @@ T* (    docker run --rm -it -v "$\(pwd\):/workspace" devnavigator \\) Tj
 T* (      validate-email --email person@example.com) Tj
 T* () Tj
 T* () Tj
-T* (Comment:) Tj
-T* (The Docker image runs devnavigator.py directly. Mounting the repo to /workspace gives the) Tj
-T* (container access to your local .env, files, and database folder.) Tj
+ET
+endstream
+endobj
+8 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 9 0 R >>
+endobj
+9 0 obj
+<< /Length 2067 >>
+stream
+BT
+/F1 10 Tf
+14 TL
+1 0 0 1 50 742 Tm
+(Comment:) Tj
+T* (The Docker image routes commands through a small entrypoint helper. Standard email CLI) Tj
+T* (commands go to devnavigator.py, while monitor, toy-server, and toy-client run the Python) Tj
+T* (monitor script. Mounting the repo to /workspace gives the container access to your local) Tj
+T* (.env, files, and database folder.) Tj
+T* () Tj
+T* (    # Run the Python network monitor from the main Docker image) Tj
+T* (    docker run --rm -it --network host -v "$\(pwd\):/workspace" devnavigator \\) Tj
+T* (      monitor --interface auto --target 192.168.1.254 --samples 1) Tj
+T* () Tj
+T* () Tj
+T* (    # Run the Python monitor continuously until you stop it) Tj
+T* (    docker run --rm -it --network host -v "$\(pwd\):/workspace" devnavigator \\) Tj
+T* (      monitor --interface auto --target 192.168.1.254 --loop) Tj
+T* () Tj
 T* () Tj
 T* (EXTRACT EMAILS FROM A FILE) Tj
 T* (--------------------------) Tj
@@ -113,7 +165,7 @@ T* (    python3 devnavigator.py extract-emails --file your_file.txt --store --so
 T* () Tj
 T* () Tj
 T* (    # Example using the helper shell script) Tj
-T* (    ./extract-emails.sh your_file.txt) Tj
+T* (    ./scripts/extraction/extract-emails.sh your_file.txt) Tj
 T* () Tj
 T* () Tj
 T* (Comment:) Tj
@@ -128,20 +180,7 @@ T* (    python3 devnavigator.py import-contacts --file your_contacts.csv --sourc
 T* () Tj
 T* () Tj
 T* (    # Import and mark contacts as approved/sendable immediately) Tj
-ET
-endstream
-endobj
-8 0 obj
-<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 9 0 R >>
-endobj
-9 0 obj
-<< /Length 1638 >>
-stream
-BT
-/F1 10 Tf
-14 TL
-1 0 0 1 50 742 Tm
-(    python3 devnavigator.py import-contacts --file your_contacts.csv --source csv_upload) Tj
+T* (    python3 devnavigator.py import-contacts --file your_contacts.csv --source csv_upload) Tj
 T* (    --consent) Tj
 T* () Tj
 T* () Tj
@@ -150,13 +189,31 @@ T* (Use this when your file already has columns like email,name,company,country.
 T* () Tj
 T* (CHECK WHAT WAS SAVED) Tj
 T* (--------------------) Tj
-T* () Tj
+ET
+endstream
+endobj
+10 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 11 0 R >>
+endobj
+11 0 obj
+<< /Length 1796 >>
+stream
+BT
+/F1 10 Tf
+14 TL
+1 0 0 1 50 742 Tm
+() Tj
 T* (    # Show high-level contact counts) Tj
 T* (    python3 devnavigator.py stats) Tj
 T* () Tj
 T* () Tj
 T* (    # Show the queue with a few rows) Tj
 T* (    python3 devnavigator.py queue --queue all --limit 20) Tj
+T* () Tj
+T* () Tj
+T* (    # List every stored email from the internet-search database, including archived rows) Tj
+T* (    python3 devnavigator.py list-search-emails --db-path ./database/internet_search.db) Tj
+T* (    --emails-only) Tj
 T* () Tj
 T* () Tj
 T* (    # Show only contacts ready to send) Tj
@@ -188,41 +245,208 @@ T* () Tj
 T* (Comment:) Tj
 T* (Validation checks syntax and, by default, also tries DNS/MX validation when available.) Tj
 T* () Tj
-T* (AUTOMATED SEARCH AND SAVE TO DATABASE) Tj
+T* (AUTOMATED SEARCH FROM INTERNET) Tj
+T* (------------------------------) Tj
+T* () Tj
+T* (    # Preview internet results only, without writing to the main local database) Tj
+T* (    ./scripts/search/search-internet-emails.sh "frontend developer" "react,javascript" all) Tj
 ET
 endstream
 endobj
-10 0 obj
-<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 11 0 R >>
+12 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 13 0 R >>
 endobj
-11 0 obj
-<< /Length 1904 >>
+13 0 obj
+<< /Length 2187 >>
 stream
 BT
 /F1 10 Tf
 14 TL
 1 0 0 1 50 742 Tm
-(-------------------------------------) Tj
-T* () Tj
-T* (    # Search automatically and store results in the database) Tj
-T* (    python3 devnavigator.py search-auto --title "frontend developer" --keywords) Tj
-T* (    "react,javascript" --country US --remote) Tj
+(    remote 10) Tj
 T* () Tj
 T* () Tj
-T* (    # Another automatic search example) Tj
-T* (    python3 devnavigator.py search-auto --title "python developer" --keywords) Tj
-T* (    "django,backend,remote" --remote) Tj
+T* (    # Real mode: store validated results in the separate internet-search database) Tj
+T* (    ./scripts/search/search-internet-emails-real.sh "frontend developer" "react,javascript") Tj
+T* (    all remote 10) Tj
 T* () Tj
 T* () Tj
-T* (    # Search and filter results using the current filtered workflow) Tj
-T* (    python3 devnavigator.py search-filtered --title "frontend developer" --keywords) Tj
-T* (    "react,javascript" --country US --remote) Tj
+T* (    # Worldwide mode helper: global search plus separate-db storage) Tj
+T* (    ./scripts/search/search-internet-emails-world.sh "frontend developer" "react,javascript") Tj
+T* (    remote 10) Tj
+T* () Tj
+T* () Tj
+T* (    # Print all stored emails first, then refresh with a worldwide 1000-result search) Tj
+T* (    ./scripts/search/search-list-and-refresh-world.sh "frontend developer") Tj
+T* (    "react,javascript" remote 1000 1000) Tj
+T* () Tj
+T* () Tj
+T* (    # Store internet results in a separate SQLite file) Tj
+T* (    INTERNET_SEARCH_STORE=1 \\) Tj
+T* (    INTERNET_SEARCH_DB_PATH=./database/internet_search.db \\) Tj
+T* (    ./scripts/search/search-internet-emails.sh "python developer" "django,backend,remote") Tj
+T* (    all remote 10) Tj
+T* () Tj
+T* () Tj
+T* (    # Export validated preview results to CSV without storing them in SQLite) Tj
+T* (    INTERNET_SEARCH_EXPORT_PATH=./exports/internet_search_results.csv \\) Tj
+T* (    ./scripts/search/search-internet-emails.sh "frontend developer" "react,javascript" all) Tj
+T* (    remote 10) Tj
+T* () Tj
+T* () Tj
+T* (    # Show every validated result instead of only the first N) Tj
+T* (    ./scripts/search/search-internet-emails.sh "frontend developer" "react,javascript" all) Tj
+T* (    remote 0) Tj
+T* () Tj
+T* () Tj
+T* (    # Load provider API keys and optional search env vars from a reusable file) Tj
+T* (    cp scripts/env/internet-search.env.example.sh scripts/env/internet-search.env.sh) Tj
+T* (    source ./scripts/env/internet-search.env.sh) Tj
+T* () Tj
+T* () Tj
+T* (    # Run the same internet search flow through Docker) Tj
+T* (    EXTRACT_PROXY_URL=http://REAL_PROXY_HOST:8080 \\) Tj
+T* (    ./scripts/search/docker-search-internet-emails.sh "frontend developer") Tj
+T* (    "react,javascript" all remote 10) Tj
+T* () Tj
+T* () Tj
+T* (    # Use npm command wrappers with pass-through arguments) Tj
+ET
+endstream
+endobj
+14 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 15 0 R >>
+endobj
+15 0 obj
+<< /Length 2467 >>
+stream
+BT
+/F1 10 Tf
+14 TL
+1 0 0 1 50 742 Tm
+(    npm run search:internet -- "frontend developer" "react,javascript" all remote 10) Tj
+T* (    npm run search:internet:real -- "frontend developer" "react,javascript" all remote 10) Tj
+T* (    npm run search:internet:world -- "frontend developer" "react,javascript" remote 10) Tj
+T* (    npm run search:internet:refresh -- "frontend developer" "react,javascript" remote 1000) Tj
+T* (    1000) Tj
+T* (    npm run docker:search:internet -- "frontend developer" "react,javascript" all remote 10) Tj
+T* (    npm run search:deliver -- --title "frontend developer" --keywords "react,javascript") Tj
+T* (    --country all --remote --send) Tj
+T* () Tj
+T* () Tj
+T* (    # List every stored email from the separate internet-search database) Tj
+T* (    python3 devnavigator.py queue --db-path ./database/internet_search.db --queue all) Tj
+T* (    --limit 0) Tj
 T* () Tj
 T* () Tj
 T* (Comment:) Tj
-T* (search-auto stores results in the database. After running it, check with stats and queue.) Tj
+T* (Internet extraction is preview-only by default. The wrapper now auto-loads .env, clears) Tj
+T* (stale runtime cache, and then runs the search. Add INTERNET_SEARCH_STORE=1 and point) Tj
+T* (INTERNET_SEARCH_DB_PATH to a separate file if you want to save results without touching the) Tj
+T* (main local database.) Tj
 T* () Tj
-T* (APPROVE OR REVIEW CONTACTS) Tj
+T* (    # Check whether the machine is under the search thresholds before starting) Tj
+T* (    python3 search_threshold_guard.py) Tj
+T* () Tj
+T* () Tj
+T* (    # Short crawler alias for the same Python internet-search pipeline) Tj
+T* (    ./scripts/extraction/crawl-emails.sh "frontend developer" "react,javascript" all remote) Tj
+T* (    10) Tj
+T* () Tj
+T* () Tj
+T* (    # Tune thresholds with env vars) Tj
+T* (    SEARCH_MAX_CPU_PERCENT=90 \\) Tj
+T* (    SEARCH_MAX_MEMORY_PERCENT=85 \\) Tj
+T* (    SEARCH_MAX_PROCESS_COUNT=800 \\) Tj
+T* (    SEARCH_MAX_SINGLE_PROCESS_CPU_PERCENT=25 \\) Tj
+T* (    SEARCH_WARN_ONLY_PROCESS_NAMES=code,gnome-shell \\) Tj
+T* (    SEARCH_MAX_SINGLE_PROCESS_IO_MBPS=25 \\) Tj
+T* (    python3 search_threshold_guard.py) Tj
+T* () Tj
+T* () Tj
+T* (    # Bypass the guard when you are debugging the pipeline) Tj
+T* (    AUTO_SYSTEM_THRESHOLD_GUARD=0 ./scripts/search/search-internet-emails.sh "frontend) Tj
+T* (    developer" "react,javascript" all remote 10) Tj
+T* () Tj
+T* () Tj
+T* (Comment:) Tj
+T* (The internet-search wrappers run the guard in warn-only mode, so they report local CPU,) Tj
+T* (memory, disk, process count, and listening-port pressure but do not stop the lookup.) Tj
+ET
+endstream
+endobj
+16 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 17 0 R >>
+endobj
+17 0 obj
+<< /Length 1859 >>
+stream
+BT
+/F1 10 Tf
+14 TL
+1 0 0 1 50 742 Tm
+() Tj
+T* (    # Search, validate, store, approve, and send the validated batch from a separate DB) Tj
+T* (    ./scripts/search/search-validate-send.sh \\) Tj
+T* (      --title "frontend developer" \\) Tj
+T* (      --keywords "react,javascript" \\) Tj
+T* (      --country all \\) Tj
+T* (      --remote \\) Tj
+T* (      --template earning_opportunity \\) Tj
+T* (      --send) Tj
+T* () Tj
+T* () Tj
+T* (    # Preview the same pipeline without sending) Tj
+T* (    ./scripts/search/search-validate-send.sh \\) Tj
+T* (      --title "frontend developer" \\) Tj
+T* (      --keywords "react,javascript" \\) Tj
+T* (      --country all \\) Tj
+T* (      --remote \\) Tj
+T* (      --template earning_opportunity \\) Tj
+T* (      --dry-run) Tj
+T* () Tj
+T* () Tj
+T* (Comment:) Tj
+T* (search-deliver stores the validated batch in ./database/internet_search.db by default, marks) Tj
+T* (exactly that batch as sendable when --send is present, and then sends only those validated) Tj
+T* (emails. Use --dry-run first if you want to review the template and recipients before) Tj
+T* (delivery.) Tj
+T* () Tj
+T* (CACHE CLEANUP) Tj
+T* (-------------) Tj
+T* () Tj
+T* (    # Clear runtime search state only) Tj
+T* (    bash scripts/search/clear-search-cache.sh) Tj
+T* () Tj
+T* () Tj
+T* (    # Also clear cached IP geolocation rows) Tj
+T* (    CLEAR_GEO_CACHE=1 bash scripts/search/clear-search-cache.sh) Tj
+T* () Tj
+T* () Tj
+T* (    # Run it every hour with cron) Tj
+T* (    0 * * * * cd /home/kali/Desktop/devnavigator && /bin/bash) Tj
+T* (    scripts/search/clear-search-cache.sh >>) Tj
+T* (    /home/kali/Desktop/devnavigator/runtime/cache-clear.log 2>&1) Tj
+T* () Tj
+T* () Tj
+T* (Comment:) Tj
+T* (Use the default command for the safe runtime cleanup. Add CLEAR_GEO_CACHE=1 only if you want) Tj
+T* (to wipe the IP lookup cache too.) Tj
+T* () Tj
+ET
+endstream
+endobj
+18 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 19 0 R >>
+endobj
+19 0 obj
+<< /Length 1666 >>
+stream
+BT
+/F1 10 Tf
+14 TL
+1 0 0 1 50 742 Tm
+(APPROVE OR REVIEW CONTACTS) Tj
 T* (--------------------------) Tj
 T* () Tj
 T* (    # Approve the newest review contacts) Tj
@@ -250,20 +474,7 @@ T* () Tj
 T* () Tj
 T* (    # Preview the verification email without saving or sending) Tj
 T* (    python3 devnavigator.py send-verification-email --email person@example.com --name "Jane) Tj
-ET
-endstream
-endobj
-12 0 obj
-<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 13 0 R >>
-endobj
-13 0 obj
-<< /Length 1543 >>
-stream
-BT
-/F1 10 Tf
-14 TL
-1 0 0 1 50 742 Tm
-(    Doe" --dry-run) Tj
+T* (    Doe" --dry-run) Tj
 T* () Tj
 T* () Tj
 T* (    # Confirm verification using email + code) Tj
@@ -283,7 +494,20 @@ T* (---------------------) Tj
 T* () Tj
 T* (If your goal is:) Tj
 T* () Tj
-T* (1. Extract emails) Tj
+ET
+endstream
+endobj
+20 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 21 0 R >>
+endobj
+21 0 obj
+<< /Length 1344 >>
+stream
+BT
+/F1 10 Tf
+14 TL
+1 0 0 1 50 742 Tm
+(1. Extract emails) Tj
 T* (2. Save them to the database) Tj
 T* (3. Check validation) Tj
 T* () Tj
@@ -304,31 +528,19 @@ T* (    python3 extract.py) Tj
 T* () Tj
 T* () Tj
 T* (    # Older batch helper) Tj
-T* (    bash batch-extract.sh) Tj
+T* (    bash scripts/extraction/batch-extract.sh) Tj
 T* () Tj
 T* () Tj
 T* (Comment:) Tj
-T* (These helpers are older wrappers. The most reliable commands right now are the direct) Tj
-T* (python3 devnavigator.py ... commands listed above.) Tj
+T* (These helpers now forward into the main python3 devnavigator.py ... workflow for extraction,) Tj
+T* (queue inspection, export, and send-status reporting. The direct CLI is still the clearest) Tj
+T* (source of truth.) Tj
 T* () Tj
-ET
-endstream
-endobj
-14 0 obj
-<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 15 0 R >>
-endobj
-15 0 obj
-<< /Length 339 >>
-stream
-BT
-/F1 10 Tf
-14 TL
-1 0 0 1 50 742 Tm
-(CREATE PDF VERSION OF THIS RUNBOOK) Tj
+T* (CREATE PDF VERSION OF THIS RUNBOOK) Tj
 T* (----------------------------------) Tj
 T* () Tj
 T* (    # Generate a PDF from this markdown file) Tj
-T* (    ./create-commands-runbook-pdf.sh) Tj
+T* (    ./scripts/pdf/create-commands-runbook-pdf.sh) Tj
 T* () Tj
 T* () Tj
 T* (Comment:) Tj
@@ -337,25 +549,31 @@ ET
 endstream
 endobj
 xref
-0 16
-0000000000 65535 f 
-0000000015 00000 n 
-0000000064 00000 n 
-0000000154 00000 n 
-0000000222 00000 n 
-0000000348 00000 n 
-0000002104 00000 n 
-0000002230 00000 n 
-0000004224 00000 n 
-0000004350 00000 n 
-0000006040 00000 n 
-0000006168 00000 n 
-0000008125 00000 n 
-0000008253 00000 n 
-0000009849 00000 n 
-0000009977 00000 n 
+0 22
+0000000000 65535 f
+0000000015 00000 n
+0000000064 00000 n
+0000000175 00000 n
+0000000243 00000 n
+0000000369 00000 n
+0000002166 00000 n
+0000002292 00000 n
+0000004358 00000 n
+0000004484 00000 n
+0000006603 00000 n
+0000006731 00000 n
+0000008580 00000 n
+0000008708 00000 n
+0000010948 00000 n
+0000011076 00000 n
+0000013596 00000 n
+0000013724 00000 n
+0000015636 00000 n
+0000015764 00000 n
+0000017483 00000 n
+0000017611 00000 n
 trailer
-<< /Size 16 /Root 1 0 R >>
+<< /Size 22 /Root 1 0 R >>
 startxref
-10368
+19008
 %%EOF
