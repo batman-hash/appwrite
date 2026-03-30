@@ -106,7 +106,7 @@ echo ""
 
 if [[ "$SKIP_BUILD" -eq 0 ]]; then
     echo "Step 1: Building C++ sender..."
-    bash build.sh
+    bash ./scripts/build/build.sh
     echo ""
 fi
 

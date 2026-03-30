@@ -1,4 +1,5 @@
 import sqlite3
+from pathlib import Path
 from datetime import datetime, timedelta, timezone
 
 from python_engine.database_manager import DatabaseManager
@@ -173,3 +174,81 @@ def test_approve_recent_contacts_only_updates_newest_review_rows(tmp_path):
         "already-approved@example.com",
     }
     assert {contact["email"] for contact in review_contacts} == {"older-review@example.com"}
+
+
+def test_approve_contacts_updates_exact_emails(tmp_path):
+    db_path = tmp_path / "devnav.db"
+    manager = DatabaseManager(str(db_path))
+    manager.initialize_database()
+
+    conn = sqlite3.connect(str(db_path))
+    conn.executemany(
+        "INSERT INTO contacts (email, source, consent, sent) VALUES (?, ?, ?, ?)",
+        [
+            ("alpha@example.com", "manual", 0, 0),
+            ("beta@example.com", "manual", 0, 0),
+            ("gamma@example.com", "manual", 1, 0),
+        ],
+    )
+    conn.commit()
+    conn.close()
+
+    approved = manager.approve_contacts(["alpha@example.com", "gamma@example.com"])
+    assert approved == 2
+
+    ready_contacts = manager.get_contacts(queue="ready")
+    assert {contact["email"] for contact in ready_contacts} == {
+        "alpha@example.com",
+        "gamma@example.com",
+    }
+
+    review_contacts = manager.get_contacts(queue="review")
+    assert {contact["email"] for contact in review_contacts} == {"beta@example.com"}
+
+
+def test_export_contacts_and_send_status(tmp_path):
+    db_path = tmp_path / "devnav.db"
+    export_path = tmp_path / "contacts.csv"
+    manager = DatabaseManager(str(db_path))
+    manager.initialize_database()
+
+    conn = sqlite3.connect(str(db_path))
+    cursor = conn.cursor()
+    cursor.executemany(
+        """
+        INSERT INTO contacts (email, source, consent, sent, opened, bounced, unsubscribed)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        """,
+        [
+            ("sent@example.com", "manual", 1, 1, 1, 0, 0),
+            ("ready@example.com", "manual", 1, 0, 0, 0, 0),
+        ],
+    )
+    contact_id = cursor.execute(
+        "SELECT id FROM contacts WHERE email = ?",
+        ("sent@example.com",),
+    ).fetchone()[0]
+    cursor.executemany(
+        """
+        INSERT INTO email_logs (contact_id, sent_at, status, error_message)
+        VALUES (?, CURRENT_TIMESTAMP, ?, ?)
+        """,
+        [
+            (contact_id, "sent", None),
+            (contact_id, "failed", "smtp error"),
+        ],
+    )
+    conn.commit()
+    conn.close()
+
+    exported = manager.export_contacts(str(export_path), queue="all")
+    status = manager.get_send_status(limit=5)
+
+    csv_text = Path(export_path).read_text(encoding="utf-8")
+    assert exported == 2
+    assert "sent@example.com" in csv_text
+    assert "ready@example.com" in csv_text
+    assert status["total_attempts"] == 2
+    assert status["successful"] == 1
+    assert status["failed"] == 1
+    assert status["contacts"][0]["email"] == "sent@example.com"

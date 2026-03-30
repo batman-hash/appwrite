@@ -37,7 +37,7 @@ class EmailSourceManager:
     def _load_api_keys(self) -> Dict[str, str]:
         """Load API keys from environment"""
         return {
-            'hunter': os.getenv('HUNTER_IO_API_KEY', ''),
+            'hunter': os.getenv('HUNTER_API_KEY', os.getenv('HUNTER_IO_API_KEY', '')),
             'clearbit': os.getenv('CLEARBIT_API_KEY', ''),
             'apollo': os.getenv('APOLLO_API_KEY', ''),
             'rocketreach': os.getenv('ROCKETREACH_API_KEY', ''),
@@ -61,7 +61,7 @@ class EmailSourceManager:
         Returns list of {email, name, source_url}
         """
         if not self.api_keys['hunter']:
-            print("❌ HUNTER_IO_API_KEY not set")
+            print("❌ HUNTER_API_KEY not set")
             return []
         
         base_url = "https://api.hunter.io/v2/domain-search"
@@ -141,11 +141,11 @@ class EmailSourceManager:
     
     def search_apollo(self, query: str, limit: int = 50) -> List[Dict]:
         """
-        Search Apollo for B2B emails and contacts
-        Pricing: Free tier available, Paid from $99/month
+        Search Apollo for B2B people and enrich them with email addresses.
+        Pricing: Free tier available, Paid plans unlock broader access.
         
         Args:
-            query: Search query (person name, title, domain, etc)
+            query: Search query (person title or prospecting query)
             limit: Number of results
         
         Returns list of contacts with emails
@@ -153,30 +153,66 @@ class EmailSourceManager:
         if not self.api_keys['apollo']:
             print("❌ APOLLO_API_KEY not set")
             return []
-        
-        base_url = "https://api.apollo.io/v1/contacts/search"
-        payload = {
-            'api_key': self.api_keys['apollo'],
-            'top_id': query,
-            'limit': min(limit, 100)
+
+        headers = {
+            'x-api-key': self.api_keys['apollo'],
+            'accept': 'application/json',
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache',
         }
-        
+
         try:
-            response = requests.post(base_url, json=payload, timeout=10)
-            if response.status_code == 200:
-                data = response.json()
-                contacts = []
-                for contact in data.get('contacts', [])[:limit]:
+            search_url = "https://api.apollo.io/api/v1/mixed_people/api_search"
+            search_payload = {
+                'person_titles': [query],
+                'per_page': min(max(limit, 1), 100),
+            }
+
+            response = requests.post(search_url, headers=headers, json=search_payload, timeout=10)
+            if response.status_code != 200:
+                print(f"❌ Apollo search error: {response.status_code}")
+                return []
+
+            search_data = response.json()
+            people = search_data.get('people', []) or []
+            person_ids = [person.get('id') for person in people if person.get('id')]
+            if not person_ids:
+                return []
+
+            contacts = []
+            enrich_url = "https://api.apollo.io/api/v1/people/bulk_match"
+            for start in range(0, min(len(person_ids), limit), 10):
+                batch_ids = person_ids[start:start + 10]
+                enrich_response = requests.post(
+                    enrich_url,
+                    params={'reveal_personal_emails': 'true', 'reveal_phone_number': 'false'},
+                    headers=headers,
+                    json={'details': [{'id': person_id} for person_id in batch_ids]},
+                    timeout=10,
+                )
+                if enrich_response.status_code != 200:
+                    print(f"❌ Apollo enrichment error: {enrich_response.status_code}")
+                    continue
+
+                enrich_data = enrich_response.json()
+                for match in enrich_data.get('matches', []):
+                    email = match.get('email')
+                    if not email:
+                        continue
+
+                    organization = match.get('organization') or {}
                     contacts.append({
-                        'email': contact.get('email'),
-                        'name': contact.get('name'),
-                        'title': contact.get('title'),
-                        'company': contact.get('organization_name'),
-                        'phone': contact.get('phone_number'),
+                        'email': email,
+                        'name': match.get('name') or f"{match.get('first_name', '')} {match.get('last_name', '')}".strip(),
+                        'title': match.get('title'),
+                        'company': organization.get('name') or match.get('organization_name'),
+                        'phone': match.get('phone_number'),
+                        'country': match.get('country'),
                         'source': 'apollo',
-                        'verified': contact.get('email_status') == 'verified'
+                        'verified': match.get('email_status') == 'verified' or match.get('email_true_status') == 'Verified',
                     })
-                return contacts
+
+            return contacts
         except requests.RequestException as e:
             print(f"❌ Apollo request failed: {e}")
             return []

@@ -18,7 +18,7 @@ Setup:
   1. Go to: https://hunter.io
   2. Sign up (10 free searches/month)
   3. Copy API key from dashboard
-  4. Add to .env: HUNTER_IO_API_KEY=your_key
+  4. Add to .env: HUNTER_API_KEY=your_key
 
 Example Code:
   from python_engine.data_sources import EmailSourceManager
@@ -154,7 +154,7 @@ QUICK SETUP SCRIPT
 # 2. Update .env
 nano .env
 # Add your API keys:
-# HUNTER_IO_API_KEY=...
+# HUNTER_API_KEY=...
 # APOLLO_API_KEY=...
 # MAXMIND_API_KEY=...
 # IPQS_API_KEY=...

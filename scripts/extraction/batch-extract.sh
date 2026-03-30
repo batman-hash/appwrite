@@ -1,6 +1,19 @@
 #!/bin/bash
 # Batch Email Extraction Script
-# Extract hundreds of emails automatically with multiple searches
+# Extract contacts through the shared DevNavigator CLI flow.
+
+set -euo pipefail
+
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$PROJECT_ROOT"
+
+if [ -f "./.env" ]; then
+  . "./scripts/env/internet-search.env.sh"
+fi
+
+if [ "${AUTO_SYSTEM_THRESHOLD_GUARD:-1}" != "0" ] && [ "${AUTO_SYSTEM_THRESHOLD_GUARD:-1}" != "false" ] && [ "${AUTO_SYSTEM_THRESHOLD_GUARD:-1}" != "no" ]; then
+  python3 "./search_threshold_guard.py" --root "$PROJECT_ROOT" --warn-only
+fi
 
 echo "╔════════════════════════════════════════════════════════════════════════════╗"
 echo "║                  🚀 BATCH EMAIL EXTRACTION SCRIPT                         ║"
@@ -9,15 +22,23 @@ echo "╚═══════════════════════�
 echo ""
 
 get_total_count() {
-  python3 extract.py stats 2>&1 | grep "Total" | awk '{print $3}'
+  if [ ! -f "database/devnav.db" ]; then
+    echo "0"
+    return
+  fi
+
+  sqlite3 database/devnav.db "SELECT COUNT(*) FROM contacts WHERE archived = 0;"
 }
 
 run_search_auto() {
   local title="$1"
   local keywords="$2"
 
-  # Feed a blank country value so the current CLI can run non-interactively.
-  if ! printf '\n' | python3 devnavigator.py search-auto --title "$title" --keywords "$keywords" > /dev/null 2>&1; then
+  if ! python3 devnavigator.py search-auto \
+    --title "$title" \
+    --keywords "$keywords" \
+    --store \
+    --show-limit 0 > /dev/null 2>&1; then
     echo "    ✗ Search failed for: $title"
     return 1
   fi
@@ -27,7 +48,7 @@ run_search_filtered() {
   local label="$1"
   shift
 
-  if ! python3 devnavigator.py search-filtered "$@" > /dev/null 2>&1; then
+  if ! python3 devnavigator.py search-filtered --store "$@" > /dev/null 2>&1; then
     echo "    ✗ Filtered search failed for: $label"
     return 1
   fi
@@ -113,7 +134,7 @@ echo ""
 # Show final stats
 echo "FINAL STATISTICS:"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-python3 extract.py stats
+python3 devnavigator.py stats
 ending_count="$(get_total_count)"
 echo "Added this run: $((ending_count - starting_count))"
 
@@ -122,10 +143,10 @@ echo "NEXT STEPS:"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 echo "1. View all extracted emails:"
-echo "   python3 extract.py view"
+echo "   python3 devnavigator.py queue --queue all --limit 50"
 echo ""
 echo "2. Export to CSV:"
-echo "   python3 extract.py export"
+echo "   python3 devnavigator.py export-contacts --output extracted_emails_export.csv --queue all"
 echo ""
 echo "3. Send campaigns:"
 echo "   python3 send_test_emails.py send --limit 100"

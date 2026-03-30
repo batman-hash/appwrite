@@ -296,7 +296,7 @@ for target in perfect_targets[:10]:
 
 ### Execution (2 min)
 
-- [ ] Build C++ sender: `./build.sh`
+- [ ] Build C++ sender: `./scripts/build/build.sh`
 - [ ] Send campaign: `npm run send:emails`
 - [ ] Monitor: `python3 devnavigator.py stats`
 

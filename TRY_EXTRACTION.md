@@ -6,7 +6,7 @@ Run this one command to see everything work:
 
 ```bash
 cd /home/kali/Desktop/devnavigator
-./try-extraction.sh
+./scripts/extraction/try-extraction.sh
 ```
 
 **What it does:**
@@ -207,7 +207,7 @@ python3 devnavigator.py --help
 ### 1. Quick start (30 seconds)
 ```bash
 cd /home/kali/Desktop/devnavigator
-./try-extraction.sh
+./scripts/extraction/try-extraction.sh
 ```
 
 ### 2. Or manual extraction
@@ -269,7 +269,7 @@ A: Yes! After extraction, use filtering: `search-filtered --title "junior fronte
 
 ```bash
 cd /home/kali/Desktop/devnavigator
-./try-extraction.sh
+./scripts/extraction/try-extraction.sh
 ```
 
 That's it! You'll see emails extracted, stored, and exported in 30 seconds.

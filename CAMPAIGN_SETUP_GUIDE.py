@@ -280,7 +280,7 @@ STEP 4: SEND YOUR CAMPAIGN - 2 MINUTES
 
 2. Build C++ sender:
 
-./build.sh
+./scripts/build/build.sh
 
 3. Send campaign:
 

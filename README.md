@@ -54,6 +54,37 @@ devnavigator/
 │   ├── analyzer.py
 │   ├── recommender.py
 │   └── tracker.py
+├── scripts/              # Shell scripts organized by function
+│   ├── build/            # Build and setup scripts
+│   │   ├── build.sh
+│   │   └── setup.sh
+│   ├── extraction/       # Email extraction scripts
+│   │   ├── batch-extract.sh
+│   │   ├── extract-emails.sh
+│   │   ├── crawl-emails.sh
+│   │   └── try-extraction.sh
+│   ├── search/           # Internet search scripts
+│   │   ├── search-internet-emails.sh
+│   │   ├── search-internet-emails-real.sh
+│   │   ├── search-internet-emails-world.sh
+│   │   ├── search-list-and-refresh-world.sh
+│   │   ├── search-validate-send.sh
+│   │   ├── docker-search-internet-emails.sh
+│   │   ├── clear-search-cache.sh
+│   │   └── one-go.sh
+│   ├── docker/           # Docker-related scripts
+│   │   └── docker-entrypoint.sh
+│   ├── pdf/              # PDF generation scripts
+│   │   ├── CONVERT_TO_PDF.sh
+│   │   ├── convert-to-pdf.sh
+│   │   ├── create-commands-runbook-pdf.sh
+│   │   └── create-manual-pdf.sh
+│   ├── env/              # Environment configuration scripts
+│   │   ├── internet-search.env.example.sh
+│   │   └── internet-search.env.sh
+│   └── compilation/      # C++ compilation scripts
+│       ├── build_windows_from_linux.sh
+│       └── toy_demo.sh
 ├── database/             # SQLite database
 ├── data/                 # Data files (emails, lists)
 ├── tests/                # Test suite
@@ -61,8 +92,6 @@ devnavigator/
 ├── package.json          # Node dependencies
 ├── requirements.txt      # Python dependencies
 ├── .env.example          # Environment template
-├── setup.sh              # Setup script
-├── build.sh              # Build script
 └── Dockerfile            # Docker configuration
 ```
 
@@ -72,10 +101,10 @@ devnavigator/
 
 ```bash
 # Make scripts executable
-chmod +x setup.sh build.sh extract-emails.sh
+chmod +x scripts/build/setup.sh scripts/build/build.sh scripts/extraction/extract-emails.sh
 
 # Run setup
-./setup.sh
+./scripts/build/setup.sh
 ```
 
 This will:
@@ -113,6 +142,12 @@ python3 devnavigator.py extract-emails --file emails.txt --store
 
 # View statistics
 python3 devnavigator.py stats
+
+# Inspect the current queue
+python3 devnavigator.py queue --queue all --limit 20
+
+# Export contacts to CSV
+python3 devnavigator.py export-contacts --output exported_contacts.csv --queue all
 ```
 
 ### 4. Manage Templates
@@ -129,7 +164,7 @@ python3 devnavigator.py add-template --name "my_template"
 
 ```bash
 # Build C++ sender
-./build.sh
+./scripts/build/build.sh
 
 # Send emails
 npm run send:emails
@@ -363,6 +398,24 @@ docker run --rm -it -v "$(pwd):/workspace" devnavigator \
 ```
 
 ```bash
+# Run the network monitor from the same image
+docker run --rm -it --network host -v "$(pwd):/workspace" devnavigator \
+  monitor --interface auto --target 192.168.1.254 --samples 1
+```
+
+```bash
+# Keep the Python monitor running in loop mode until Ctrl+C
+docker run --rm -it --network host -v "$(pwd):/workspace" devnavigator \
+  monitor --interface auto --target 192.168.1.254 --loop
+```
+
+```bash
+# Run the local retry/replay demo from the same image
+docker run --rm -it -v "$(pwd):/workspace" devnavigator toy-server
+docker run --rm -it -v "$(pwd):/workspace" devnavigator toy-client ping
+```
+
+```bash
 # Check saved contacts
 docker run --rm -it -v "$(pwd):/workspace" devnavigator stats
 docker run --rm -it -v "$(pwd):/workspace" devnavigator queue --queue all --limit 20
@@ -374,7 +427,7 @@ docker run --rm -it -v "$(pwd):/workspace" devnavigator \
   validate-email --email person@example.com
 ```
 
-The container now runs the real Python CLI, not the placeholder Node entrypoint. Mounting the repo to `/workspace` lets Docker use your local `.env`, `database/`, and input files naturally.
+The container now routes commands through a small entrypoint helper. Email CLI commands still go to `devnavigator.py`, while `monitor`, `toy-server`, and `toy-client` go to `compilation_cpp/scripts/network_stability_monitor.py`. Mounting the repo to `/workspace` lets Docker use your local `.env`, `database/`, and input files naturally.
 
 ## Configuration Examples
 
@@ -410,7 +463,7 @@ SMTP_USE_TLS=true
 ### "Failed to connect to SMTP"
 - Check SMTP credentials
 - Verify SMTP URL and port
-- Check firewall/network access
+- Confirm outbound SMTP connectivity from the host
 - Enable less secure apps (Gmail only)
 
 ### "Database locked"

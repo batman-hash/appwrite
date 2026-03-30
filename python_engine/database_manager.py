@@ -534,6 +534,106 @@ DevNavigator Team
         conn.close()
         return contacts
 
+    def export_contacts(
+        self,
+        output_path: str,
+        queue: str = 'all',
+        limit: Optional[int] = None,
+        source: Optional[str] = None,
+        recent_hours: int = 24,
+    ) -> int:
+        """Export contacts from a queue view to CSV."""
+        contacts = self.get_contacts(
+            queue=queue,
+            limit=limit,
+            source=source,
+            recent_hours=recent_hours,
+        )
+
+        path = Path(output_path)
+        if path.parent:
+            path.parent.mkdir(parents=True, exist_ok=True)
+
+        fieldnames = [
+            'email',
+            'name',
+            'company',
+            'country',
+            'source',
+            'queue_status',
+            'consent',
+            'sent',
+            'opened',
+            'bounced',
+            'unsubscribed',
+            'archived',
+            'created_at',
+        ]
+
+        with path.open('w', encoding='utf-8', newline='') as handle:
+            writer = csv.DictWriter(handle, fieldnames=fieldnames)
+            writer.writeheader()
+            for contact in contacts:
+                writer.writerow({field: contact.get(field, '') for field in fieldnames})
+
+        return len(contacts)
+
+    def get_send_status(self, limit: int = 20) -> Dict[str, object]:
+        """Return a summary of send activity and recent contact delivery states."""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        cursor.execute(
+            """
+            SELECT
+                COUNT(*) AS total_attempts,
+                COALESCE(SUM(CASE WHEN status = 'sent' THEN 1 ELSE 0 END), 0) AS successful,
+                COALESCE(SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END), 0) AS failed,
+                COALESCE(SUM(CASE WHEN status = 'verification_sent' THEN 1 ELSE 0 END), 0) AS verification_sent
+            FROM email_logs
+            """
+        )
+        totals = cursor.fetchone()
+
+        cursor.execute(
+            """
+            SELECT
+                email,
+                sent,
+                opened,
+                bounced,
+                unsubscribed,
+                source,
+                datetime(updated_at, 'localtime') AS updated_local
+            FROM contacts
+            WHERE archived = 0
+            ORDER BY sent DESC, datetime(updated_at) DESC, email ASC
+            LIMIT ?
+            """,
+            (limit,),
+        )
+
+        contacts = []
+        for row in cursor.fetchall():
+            contacts.append({
+                'email': row[0],
+                'sent': bool(row[1]),
+                'opened': bool(row[2]),
+                'bounced': bool(row[3]),
+                'unsubscribed': bool(row[4]),
+                'source': row[5],
+                'updated_at': row[6],
+            })
+
+        conn.close()
+        return {
+            'total_attempts': totals[0] or 0,
+            'successful': totals[1] or 0,
+            'failed': totals[2] or 0,
+            'verification_sent': totals[3] or 0,
+            'contacts': contacts,
+        }
+
     def import_contacts_file(
         self,
         file_path: str,
@@ -697,6 +797,33 @@ DevNavigator Team
             )
             """,
             params,
+        )
+
+        approved_count = cursor.rowcount
+        conn.commit()
+        conn.close()
+        return approved_count
+
+    def approve_contacts(self, emails: List[str]) -> int:
+        """Mark the provided contacts as approved/sendable."""
+        normalized_emails = [email.strip().lower() for email in emails if email and email.strip()]
+        if not normalized_emails:
+            return 0
+
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        placeholders = ','.join(['?' for _ in normalized_emails])
+        cursor.execute(
+            f"""
+            UPDATE contacts
+            SET consent = 1, updated_at = CURRENT_TIMESTAMP
+            WHERE archived = 0
+              AND sent = 0
+              AND bounced = 0
+              AND unsubscribed = 0
+              AND email IN ({placeholders})
+            """,
+            normalized_emails,
         )
 
         approved_count = cursor.rowcount

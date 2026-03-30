@@ -115,10 +115,10 @@ This project includes comprehensive documentation covering every aspect of the s
 
 ```bash
 # Make script executable
-chmod +x convert-to-pdf.sh
+chmod +x scripts/pdf/convert-to-pdf.sh
 
 # Run conversion
-./convert-to-pdf.sh
+./scripts/pdf/convert-to-pdf.sh
 
 # Result: 5 PDF files created in current directory
 ```
@@ -382,16 +382,16 @@ pandoc QUICK_REFERENCE.md -o QUICK_REFERENCE.epub
 ```
 
 **Q: Are PDFs version controlled in Git?**
-A: No, only .md files. PDFs generated locally with `convert-to-pdf.sh`
+A: No, only .md files. PDFs generated locally with `scripts/pdf/convert-to-pdf.sh`
 
 **Q: Can I update the PDFs?**
-A: Yes, edit .md files and re-run `./convert-to-pdf.sh`
+A: Yes, edit .md files and re-run `./scripts/pdf/convert-to-pdf.sh`
 
 **Q: How do I stay updated?**
 A: Pull latest from GitHub:
 ```bash
 git pull origin main
-./convert-to-pdf.sh
+./scripts/pdf/convert-to-pdf.sh
 ```
 
 ---

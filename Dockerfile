@@ -6,6 +6,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     cmake \
+    iputils-ping \
     libcurl4-openssl-dev \
     libsqlite3-dev \
     pkg-config \
@@ -22,9 +23,10 @@ RUN python -m pip install --upgrade pip && \
 
 COPY . .
 
+RUN chmod +x /opt/devnavigator/scripts/docker/docker-entrypoint.sh
 RUN mkdir -p /workspace/database /workspace/data /workspace/logs
 
 WORKDIR /workspace
 
-ENTRYPOINT ["python3", "/opt/devnavigator/devnavigator.py"]
+ENTRYPOINT ["/opt/devnavigator/scripts/docker/docker-entrypoint.sh"]
 CMD ["--help"]

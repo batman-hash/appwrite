@@ -5,12 +5,13 @@ Extract emails directly from internet sources with specific job requirements - I
 ## 📋 Table of Contents
 
 1. [Quick Start](#quick-start)
-2. [Features](#features)
-3. [Requirements Setup](#requirements-setup)
-4. [CLI Commands](#cli-commands)
-5. [Examples](#examples)
-6. [Supported Sources](#supported-sources)
-7. [Advanced Usage](#advanced-usage)
+2. [Flow Map](#flow-map)
+3. [Features](#features)
+4. [Requirements Setup](#requirements-setup)
+5. [CLI Commands](#cli-commands)
+6. [Examples](#examples)
+7. [Supported Sources](#supported-sources)
+8. [Advanced Usage](#advanced-usage)
 
 ---
 
@@ -19,12 +20,46 @@ Extract emails directly from internet sources with specific job requirements - I
 ### Basic Search (No API Keys Needed)
 
 ```bash
-# Extract junior frontend developers from GitHub
-python3 devnavigator.py search-auto \
-    --title "junior frontend developer" \
-    --keywords "react,javascript,remote" \
-    --country "USA" \
-    --remote
+# Preview internet results only
+./scripts/search/search-internet-emails.sh \
+    "junior frontend developer" \
+    "react,javascript,remote" \
+    all \
+    remote \
+    10
+```
+
+```bash
+# Store internet results in a separate SQLite file
+INTERNET_SEARCH_STORE=1 \
+INTERNET_SEARCH_DB_PATH=./database/internet_search.db \
+./scripts/search/search-internet-emails.sh \
+    "junior frontend developer" \
+    "react,javascript,remote" \
+    all \
+    remote \
+    10
+```
+
+```bash
+# Export validated preview results to CSV without storing them in SQLite
+INTERNET_SEARCH_EXPORT_PATH=./exports/internet_search_results.csv \
+./scripts/search/search-internet-emails.sh \
+    "junior frontend developer" \
+    "react,javascript,remote" \
+    all \
+    remote \
+    10
+```
+
+```bash
+# Print current stored emails first, then refresh with a worldwide 1000-result search
+./scripts/search/search-list-and-refresh-world.sh \
+    "junior frontend developer" \
+    "react,javascript,remote" \
+    remote \
+    1000 \
+    1000
 ```
 
 ### With Filtering
@@ -34,9 +69,43 @@ python3 devnavigator.py search-auto \
 python3 devnavigator.py search-filtered \
     --title "junior frontend developer" \
     --keywords "react,vue,angular" \
-    --country "USA" \
+    --country all \
     --remote
 ```
+
+---
+
+## 🗺️ Flow Map
+
+```text
+Search criteria
+    ↓
+Approved internet sources
+    ↓
+Candidate emails + source URLs
+    ↓
+Validation
+    ↓
+Deduplication
+    ↓
+Store in separate internet-search DB
+    ↓
+Review / export
+    ↓
+Send only after approval
+```
+
+In practice, the main path looks like this:
+
+- `scripts/search/search-internet-emails.sh` or `scripts/search/search-internet-emails-world.sh` for discovery
+- `scripts/extraction/crawl-emails.sh` as a shorter crawler alias that points to the same Python pipeline
+- `search_threshold_guard.py` for system-health warnings before the search starts
+- `python_engine/auto_email_extractor.py` for source lookup, validation, and dedupe
+- `python_engine/database_manager.py` for storing validated results
+- `devnavigator.py list-search-emails` for review
+- `scripts/search/search-validate-send.sh` for the final send step
+
+By default, the internet search wrappers run in preview-only mode. Turn on `INTERNET_SEARCH_STORE=1` when you want validated results written to `./database/internet_search.db`.
 
 ---
 
@@ -107,6 +176,29 @@ APOLLO_API_KEY=your_api_key_here
 cat .env
 ```
 
+Or use the reusable export file:
+
+```bash
+cp scripts/env/internet-search.env.example.sh scripts/env/internet-search.env.sh
+source ./scripts/env/internet-search.env.sh
+```
+
+The internet search wrapper also loads `.env` automatically now, so you only need to source it manually when you want the keys in your current shell session.
+
+For the full validate-then-send flow, use:
+
+```bash
+./scripts/search/search-validate-send.sh \
+  --title "frontend developer" \
+  --keywords "react,javascript" \
+  --country all \
+  --remote \
+  --template earning_opportunity \
+  --send
+```
+
+The internet search wrappers now run `search_threshold_guard.py` first in warn-only mode, so they report CPU, memory, disk, process count, listening ports, and any single current-user process that is over threshold without stopping the search. Override the defaults with `SEARCH_MAX_CPU_PERCENT`, `SEARCH_MAX_MEMORY_PERCENT`, `SEARCH_MAX_DISK_PERCENT`, `SEARCH_MAX_PROCESS_COUNT`, `SEARCH_MAX_LISTENING_PORTS`, `SEARCH_MAX_SINGLE_PROCESS_CPU_PERCENT`, `SEARCH_MAX_SINGLE_PROCESS_MEMORY_PERCENT`, `SEARCH_MAX_SINGLE_PROCESS_IO_MBPS`, and `SEARCH_WARN_ONLY_PROCESS_NAMES` if you want specific busy desktop apps to stay in the warning list.
+
 ---
 
 ## 📝 CLI Commands
@@ -124,7 +216,7 @@ python3 devnavigator.py search-auto \
 **Options:**
 - `--title`: Job title to search (e.g., "junior frontend developer")
 - `--keywords`: Search keywords comma-separated (e.g., "react,javascript")
-- `--country`: Target country (optional, e.g., "USA")
+- `--country`: Target country (optional, or `all`/`world`/`global` for worldwide search)
 - `--remote`: Filter for remote jobs only (flag)
 
 **Stores**: All found emails in database automatically
@@ -185,13 +277,13 @@ python3 devnavigator.py search-auto \
 
 ---
 
-### Example 3: Find Freelance Marketers (USA)
+### Example 3: Find Freelance Marketers Worldwide
 
 ```bash
 python3 devnavigator.py search-auto \
     --title "freelance marketer" \
     --keywords "growth,marketing,content,freelance" \
-    --country "USA"
+    --country all
 ```
 
 ---
@@ -383,6 +475,7 @@ When using `search-filtered`, results include scores:
 ### Tip 4: Target by Country
 ✅ `--country "USA"` - Only USA
 ✅ `--country "India"` - Only India
+✅ `--country all` - Worldwide search
 ✅ Without flag - All countries
 
 ### Tip 5: Search by Job Level
@@ -402,7 +495,7 @@ A: 30/search from GitHub (no limit if you keep searching)
    10/month from Hunter.io (with key)
 
 **Q: Can I search without country?**
-A: Yes, just omit `--country` flag for global search
+A: Yes, omit `--country` or use `all`, `world`, or `global` for a worldwide search
 
 **Q: How does filtering work?**
 A: It scores each profile against criteria (0-100 points) then shows top matches

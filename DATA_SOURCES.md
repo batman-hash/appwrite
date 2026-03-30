@@ -186,7 +186,7 @@ EOF
 cp .env.example .env
 
 # Add to .env
-HUNTER_IO_API_KEY=your_key_here
+HUNTER_API_KEY=your_key_here
 APOLLO_API_KEY=your_key_here
 CLEARBIT_API_KEY=your_key_here
 ROCKETREACH_API_KEY=your_key_here

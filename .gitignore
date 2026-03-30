@@ -20,7 +20,9 @@ cpp_crawler/build/
 devnavigator
 
 # IDE
-.vscode/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
 .idea/
 *.swp
 *.swo

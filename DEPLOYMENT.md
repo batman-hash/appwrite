@@ -94,10 +94,10 @@ brew install python3 nodejs cmake sqlite3 curl
 cd /home/kali/Desktop/devnavigator
 
 # Make scripts executable
-chmod +x setup.sh build.sh extract-emails.sh
+chmod +x scripts/build/setup.sh scripts/build/build.sh scripts/extraction/extract-emails.sh
 
 # Run setup (installs all dependencies)
-./setup.sh
+./scripts/build/setup.sh
 ```
 
 This will:
@@ -119,7 +119,7 @@ python3 python_engine/template_manager.py
 npm install
 
 # C++ setup
-./build.sh
+./scripts/build/build.sh
 ```
 
 ## Configuration
@@ -148,7 +148,7 @@ npm install
 
 ```bash
 # From a text file with emails (one per line)
-./extract-emails.sh contacts.txt
+./scripts/extraction/extract-emails.sh contacts.txt
 
 # Or using Python CLI
 python3 devnavigator.py extract-emails --file emails.txt --store
@@ -177,7 +177,7 @@ python3 devnavigator.py add-template --name "my_template" --subject "Hello $name
 
 ```bash
 # Build C++ sender
-./build.sh
+./scripts/build/build.sh
 
 # Send emails
 npm run send:emails
@@ -215,7 +215,7 @@ git clone https://github.com/batman-hash/campaign_people.git
 cd campaign_people
 
 # Run setup
-./setup.sh
+./scripts/build/setup.sh
 
 # Start email sender (in background)
 nohup npm run send:emails &
@@ -249,7 +249,7 @@ heroku logs --tail
 1. Connect GitHub repository
 2. Set environment variables in App settings
 3. Add build and run commands:
-   - Build: `./setup.sh`
+   - Build: `./scripts/build/setup.sh`
    - Run: `npm run send:emails`
 
 ## Database Backup

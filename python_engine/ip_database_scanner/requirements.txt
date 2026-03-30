@@ -1,0 +1,17 @@
+# IP Database Scanner Requirements
+# Install with: pip install -r requirements.txt
+
+# Core dependencies
+scapy>=2.5.0
+netifaces>=0.11.0
+
+# Database drivers (optional, for full functionality)
+pymongo>=4.0.0
+elasticsearch>=8.0.0
+redis>=4.0.0
+
+# Network scanning
+python-nmap>=0.7.1
+
+# Additional utilities
+python-dateutil>=2.8.0

@@ -1,40 +1,76 @@
 #!/usr/bin/env python3
 """
-Automated Email Extraction Tool
-Extract maximum emails from multiple sources
+Legacy extraction helper.
+
+This wrapper keeps older shortcuts working while routing everything through
+the main devnavigator CLI so the project has one shared extraction workflow.
 """
 import subprocess
 import sys
-import sqlite3
+from pathlib import Path
 
-def run_command(cmd):
-    """Run a command and return success status"""
+
+DEFAULT_DB_PATH = Path("database/devnav.db")
+
+FILTER_PRESETS = {
+    "junior_frontend_remote": [
+        "--title", "junior frontend developer",
+        "--keywords", "junior,frontend,react,javascript,remote",
+        "--remote",
+    ],
+    "job_seekers": [
+        "--title", "developer seeking opportunities",
+        "--keywords", "open to work,job seeker,available,opportunities",
+    ],
+    "money_motivated": [
+        "--title", "freelance developer",
+        "--keywords", "freelance,contract,for hire,remote",
+        "--remote",
+    ],
+}
+
+
+def run_command(args):
+    """Run a command and return True when it succeeds."""
     try:
-        result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
-        return result.returncode == 0, result.stdout + result.stderr
-    except Exception as e:
-        return False, str(e)
+        completed = subprocess.run(args, check=False)
+        return completed.returncode == 0
+    except Exception as exc:
+        print(f"✗ Command failed: {exc}")
+        return False
+
 
 def get_email_count():
-    """Get current email count from database"""
-    try:
-        conn = sqlite3.connect('database/devnav.db')
-        cursor = conn.cursor()
-        cursor.execute("SELECT COUNT(*) FROM contacts")
-        count = cursor.fetchone()[0]
-        conn.close()
-        return count
-    except:
+    """Read the active contact count from SQLite."""
+    if not DEFAULT_DB_PATH.exists():
         return 0
 
+    try:
+        completed = subprocess.run(
+            [
+                "sqlite3",
+                str(DEFAULT_DB_PATH),
+                "SELECT COUNT(*) FROM contacts WHERE archived = 0;",
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        if completed.returncode != 0:
+            return 0
+        return int((completed.stdout or "0").strip() or "0")
+    except Exception:
+        return 0
+
+
 def extraction_menu():
-    """Interactive extraction menu"""
+    """Interactive extraction menu."""
     while True:
         count = get_email_count()
-        
-        print("\n" + "="*80)
-        print(f"📧 EXTRACTION TOOL - Current: {count} emails")
-        print("="*80)
+
+        print("\n" + "=" * 80)
+        print(f"📧 EXTRACTION TOOL - Current: {count} active contacts")
+        print("=" * 80)
         print()
         print("QUICK EXTRACTIONS:")
         print("  1. 🔍 GitHub Search - Junior Developers")
@@ -43,55 +79,46 @@ def extraction_menu():
         print("  4. 🔍 GitHub Search - Money-Motivated")
         print("  5. 🔍 GitHub Search - Custom Query")
         print()
-        print("ADVANCED:")
-        print("  6. 📊 Filtered Search - Junior + Frontend + Remote")
-        print("  7. 📊 Filtered Search - Job Seekers")
-        print("  8. 📊 Filtered Search - Money Motivated")
-        print("  9. 📁 Import from CSV file")
+        print("FILTERED PRESETS:")
+        print("  6. 📊 Junior + Frontend + Remote")
+        print("  7. 📊 Job Seekers")
+        print("  8. 📊 Money Motivated")
+        print("  9. 📁 Import from file")
         print()
         print("RESULTS:")
-        print("  10. 📋 View all emails")
+        print("  10. 📋 View contacts")
         print("  11. 📊 Show statistics")
         print("  12. 💾 Export to CSV")
         print()
         print("  0. ❌ Exit")
         print()
-        
+
         choice = input("Select option (0-12): ").strip()
-        
+
         if choice == "0":
             break
-        elif choice == "1":
-            print("\n🔍 Searching GitHub for junior developers...")
+        if choice == "1":
             extract_github("junior developer remote")
         elif choice == "2":
-            print("\n🔍 Searching GitHub for freelancers...")
-            extract_github("freelance javascript")
+            extract_github("freelance javascript developer")
         elif choice == "3":
-            print("\n🔍 Searching GitHub for remote workers...")
             extract_github("remote developer available")
         elif choice == "4":
-            print("\n🔍 Searching GitHub for money-motivated...")
             extract_github("developer available for hire")
         elif choice == "5":
             query = input("Enter search query: ").strip()
             if query:
-                print(f"\n🔍 Searching GitHub for: {query}")
                 extract_github(query)
         elif choice == "6":
-            print("\n📊 Filtered search: Junior + Frontend + Remote")
-            extract_filtered("--junior 70 --frontend 60 --remote 50")
+            extract_filtered("junior_frontend_remote")
         elif choice == "7":
-            print("\n📊 Filtered search: Job Seekers")
-            extract_filtered("--job_seeker 80")
+            extract_filtered("job_seekers")
         elif choice == "8":
-            print("\n📊 Filtered search: Money Motivated")
-            extract_filtered("--money_motivated 75 --remote 60")
+            extract_filtered("money_motivated")
         elif choice == "9":
-            file = input("Enter CSV filename: ").strip()
-            if file:
-                print(f"\n📁 Importing from {file}...")
-                extract_file(file)
+            file_name = input("Enter filename: ").strip()
+            if file_name:
+                extract_file(file_name)
         elif choice == "10":
             view_emails()
         elif choice == "11":
@@ -99,150 +126,130 @@ def extraction_menu():
         elif choice == "12":
             export_csv()
 
-def extract_github(query):
-    """Extract from GitHub"""
-    before = get_email_count()
-    success, output = run_command(f'python3 devnavigator.py search-auto --query "{query}"')
-    after = get_email_count()
-    
-    if success:
-        print(f"✓ Added {after - before} new emails")
-        print(f"  Total now: {after} emails")
-    else:
-        print(f"✗ Search failed")
 
-def extract_filtered(filters):
-    """Extract with filters"""
+def extract_github(query):
+    """Search live sources and store validated results in the main database."""
     before = get_email_count()
-    success, output = run_command(f'python3 devnavigator.py search-filtered {filters}')
+    success = run_command([
+        "python3", "devnavigator.py", "search-auto",
+        "--query", query,
+        "--store",
+        "--show-limit", "10",
+    ])
     after = get_email_count()
-    
+
     if success:
-        print(f"✓ Added {after - before} filtered emails")
-        print(f"  Total now: {after} emails")
+        print(f"✓ Added {after - before} new contact(s)")
+        print(f"  Total now: {after}")
     else:
-        print(f"✗ Filtered search failed")
+        print("✗ Search failed")
+
+
+def extract_filtered(preset_or_args):
+    """Run a filtered preset or pass through raw search-filtered args."""
+    before = get_email_count()
+
+    if isinstance(preset_or_args, str) and preset_or_args in FILTER_PRESETS:
+        cli_args = FILTER_PRESETS[preset_or_args]
+    elif isinstance(preset_or_args, list):
+        cli_args = preset_or_args
+    else:
+        cli_args = [str(preset_or_args)]
+
+    command = ["python3", "devnavigator.py", "search-filtered", "--store", *cli_args]
+    success = run_command(command)
+    after = get_email_count()
+
+    if success:
+        print(f"✓ Added {after - before} filtered contact(s)")
+        print(f"  Total now: {after}")
+    else:
+        print("✗ Filtered search failed")
+
 
 def extract_file(filename):
-    """Extract from file"""
+    """Import contacts from a local file."""
     before = get_email_count()
-    success, output = run_command(f'python3 devnavigator.py extract-emails --file {filename} --store')
+    success = run_command([
+        "python3", "devnavigator.py", "extract-emails",
+        "--file", filename,
+        "--store",
+        "--show-limit", "10",
+    ])
     after = get_email_count()
-    
+
     if success:
-        print(f"✓ Added {after - before} emails from file")
-        print(f"  Total now: {after} emails")
+        print(f"✓ Added {after - before} contact(s) from file")
+        print(f"  Total now: {after}")
     else:
-        print(f"✗ File import failed")
+        print("✗ File import failed")
+
 
 def view_emails():
-    """View emails in database"""
-    try:
-        conn = sqlite3.connect('database/devnav.db')
-        cursor = conn.cursor()
-        cursor.execute("SELECT email, country FROM contacts ORDER BY email LIMIT 50")
-        
-        emails = cursor.fetchall()
-        print(f"\n📋 First 50 emails (of {get_email_count()} total):")
-        print("-" * 60)
-        
-        for email, country in emails:
-            country_str = f"({country})" if country else ""
-            print(f"  • {email} {country_str}")
-        
-        if len(emails) == 50:
-            print(f"  ... and {get_email_count() - 50} more")
-        
-        conn.close()
-    except:
-        print("✗ Error reading emails")
+    """Show the shared queue view."""
+    run_command(["python3", "devnavigator.py", "queue", "--queue", "all", "--limit", "50"])
+
 
 def show_stats():
-    """Show extraction statistics"""
-    try:
-        conn = sqlite3.connect('database/devnav.db')
-        cursor = conn.cursor()
-        
-        cursor.execute("SELECT COUNT(*) FROM contacts")
-        total = cursor.fetchone()[0]
-        
-        cursor.execute("SELECT COUNT(*) FROM contacts WHERE sent = 1")
-        sent = cursor.fetchone()[0]
-        
-        cursor.execute("SELECT COUNT(*) FROM contacts WHERE opened = 1")
-        opened = cursor.fetchone()[0]
-        
-        cursor.execute("SELECT COUNT(DISTINCT country) FROM contacts WHERE country IS NOT NULL")
-        countries = cursor.fetchone()[0]
-        
-        print(f"\n📊 Statistics:")
-        print(f"  Total emails: {total}")
-        print(f"  Sent: {sent}")
-        print(f"  Opened: {opened}")
-        print(f"  Countries represented: {countries}")
-        
-        conn.close()
-    except:
-        print("✗ Error reading stats")
+    """Show shared campaign statistics."""
+    run_command(["python3", "devnavigator.py", "stats"])
 
-def export_csv():
-    """Export emails to CSV"""
-    try:
-        filename = "extracted_emails_export.csv"
-        conn = sqlite3.connect('database/devnav.db')
-        cursor = conn.cursor()
-        
-        cursor.execute("SELECT email, name, company, country FROM contacts ORDER BY email")
-        emails = cursor.fetchall()
-        
-        with open(filename, 'w') as f:
-            f.write("email,name,company,country\n")
-            for email, name, company, country in emails:
-                name = name or ""
-                company = company or ""
-                country = country or ""
-                f.write(f'{email},"{name}","{company}",{country}\n')
-        
-        print(f"✓ Exported {len(emails)} emails to {filename}")
-        conn.close()
-    except:
+
+def export_csv(output_path="extracted_emails_export.csv"):
+    """Export contacts to CSV through the main CLI."""
+    success = run_command([
+        "python3", "devnavigator.py", "export-contacts",
+        "--output", output_path,
+        "--queue", "all",
+    ])
+    if success:
+        print(f"✓ Exported contacts to {output_path}")
+    else:
         print("✗ Export failed")
+
+
+def show_usage():
+    """Show CLI usage."""
+    print("Usage:")
+    print("  python3 extract.py github [QUERY]")
+    print("  python3 extract.py filter [PRESET|SEARCH-FILTERED-ARGS]")
+    print("  python3 extract.py import [FILE]")
+    print("  python3 extract.py stats")
+    print("  python3 extract.py view")
+    print("  python3 extract.py export [OUTPUT]")
+    print()
+    print("Filter presets:")
+    for preset in sorted(FILTER_PRESETS):
+        print(f"  - {preset}")
+
 
 if __name__ == '__main__':
     if len(sys.argv) > 1:
-        # Command line mode
-        cmd = sys.argv[1]
-        
-        if cmd == "github":
+        command = sys.argv[1]
+
+        if command == "github":
             query = " ".join(sys.argv[2:]) if len(sys.argv) > 2 else "junior developer remote"
             extract_github(query)
-        
-        elif cmd == "filter":
-            filters = " ".join(sys.argv[2:]) if len(sys.argv) > 2 else "--junior 70 --remote 60"
-            extract_filtered(filters)
-        
-        elif cmd == "import":
-            file = sys.argv[2] if len(sys.argv) > 2 else "emails.csv"
-            extract_file(file)
-        
-        elif cmd == "stats":
+        elif command == "filter":
+            if len(sys.argv) > 2 and sys.argv[2] in FILTER_PRESETS:
+                extract_filtered(sys.argv[2])
+            elif len(sys.argv) > 2:
+                extract_filtered(sys.argv[2:])
+            else:
+                extract_filtered("junior_frontend_remote")
+        elif command == "import":
+            file_name = sys.argv[2] if len(sys.argv) > 2 else "emails.csv"
+            extract_file(file_name)
+        elif command == "stats":
             show_stats()
-        
-        elif cmd == "view":
+        elif command == "view":
             view_emails()
-        
-        elif cmd == "export":
-            export_csv()
-        
+        elif command == "export":
+            output = sys.argv[2] if len(sys.argv) > 2 else "extracted_emails_export.csv"
+            export_csv(output)
         else:
-            print(f"Unknown command: {cmd}")
-            print("\nUsage:")
-            print("  python3 extract.py github [QUERY]")
-            print("  python3 extract.py filter [FILTERS]")
-            print("  python3 extract.py import [FILE]")
-            print("  python3 extract.py stats")
-            print("  python3 extract.py view")
-            print("  python3 extract.py export")
+            print(f"Unknown command: {command}")
+            print()
+            show_usage()
     else:
-        # Interactive menu
         extraction_menu()

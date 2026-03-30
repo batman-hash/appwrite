@@ -106,7 +106,7 @@ for email in emails:
 1. Go to https://hunter.io
 2. Sign up (free 10/month)
 3. Get API key: Settings → API
-4. Add to .env: `HUNTER_IO_API_KEY=your_key`
+4. Add to .env: `HUNTER_API_KEY=your_key`
 
 ---
 
