@@ -362,10 +362,7 @@ def handle_unexpected_exception(error):
 # =========================
 
 def _preferred_frontend_entry():
-    for candidate in ("react_app.html", "root.html", "index.html"):
-        if os.path.exists(os.path.join(FRONTEND_DIR, candidate)):
-            return candidate
-    return "index.html"
+    return "react_app.html"
 
 
 @app.route("/")
@@ -2822,7 +2819,7 @@ def _resend_activation_if_inactive(email, username_fallback="user"):
 
 
 def sanitize_next_url(next_url):
-    default_next = f"{STATIC_BASE_URL}/index.html"
+    default_next = f"{STATIC_BASE_URL}/"
     if not next_url:
         return default_next
 
@@ -2878,19 +2875,19 @@ def _activate_account_by_token(token):
 def activate_account(token):
     ok = _activate_account_by_token(token)
     if not ok:
-        return redirect(f"{STATIC_BASE_URL}/index.html?activate=invalid")
-    return redirect(f"{STATIC_BASE_URL}/index.html?activate=ok&login=ready")
+        return redirect(f"{STATIC_BASE_URL}/?activate=invalid")
+    return redirect(f"{STATIC_BASE_URL}/?activate=ok&login=ready")
 
 
 @app.route("/activate", methods=["GET"])
 def activate_account_query():
     token = (request.args.get("token") or "").strip()
     if not token:
-        return redirect(f"{STATIC_BASE_URL}/index.html?activate=invalid")
+        return redirect(f"{STATIC_BASE_URL}/?activate=invalid")
     ok = _activate_account_by_token(token)
     if not ok:
-        return redirect(f"{STATIC_BASE_URL}/index.html?activate=invalid")
-    return redirect(f"{STATIC_BASE_URL}/index.html?activate=ok&login=ready")
+        return redirect(f"{STATIC_BASE_URL}/?activate=invalid")
+    return redirect(f"{STATIC_BASE_URL}/?activate=ok&login=ready")
 
 
 @app.route("/resend-activation", methods=["POST"])
@@ -3076,10 +3073,10 @@ def login_form():
     ).fetchone()
     db.close()
     if user and _is_user_locked(user):
-        return redirect(f"{STATIC_BASE_URL}/index.html?login=locked")
+        return redirect(f"{STATIC_BASE_URL}/?login=locked")
     if user and password and bcrypt.checkpw(password.encode(), user["password"].encode()):
         if (user["is_active"] or 0) == 0:
-            return redirect(f"{STATIC_BASE_URL}/index.html?login=inactive")
+            return redirect(f"{STATIC_BASE_URL}/?login=inactive")
         _reset_failed_login_state(user["email"])
         session["user"] = user["email"]
         # Append username to help static pages enable chat
@@ -3090,8 +3087,8 @@ def login_form():
         return redirect(safe_next)
     failed = _register_failed_login_attempt(user)
     if failed.get("locked"):
-        return redirect(f"{STATIC_BASE_URL}/index.html?login=locked")
-    return redirect(f"{STATIC_BASE_URL}/index.html?login=failed")
+        return redirect(f"{STATIC_BASE_URL}/?login=locked")
+    return redirect(f"{STATIC_BASE_URL}/?login=failed")
 
 @app.route("/api/me", methods=["GET"])
 def me():
@@ -3506,7 +3503,7 @@ def _subscribe_response(success=False, error=None, redirect_status="ok", status_
         if error:
             body["error"] = error
         return jsonify(body), status_code
-    return redirect(f"{STATIC_BASE_URL}/index.html?subscribe={redirect_status}")
+    return redirect(f"{STATIC_BASE_URL}/?subscribe={redirect_status}")
 
 
 def _newsletter_admin_allowed():
@@ -3580,7 +3577,7 @@ def subscribe():
                 admin_email_sent=admin_email_sent,
             )
 
-        return redirect(f"{STATIC_BASE_URL}/index.html?subscribe=pending")
+        return redirect(f"{STATIC_BASE_URL}/?subscribe=pending")
 
     except sqlite3.IntegrityError:
         try:
@@ -3607,7 +3604,7 @@ def subscribe():
                     )
                     if _request_wants_json():
                         return jsonify(success=True, message="Confirmation email resent")
-                    return redirect(f"{STATIC_BASE_URL}/index.html?subscribe=pending")
+                    return redirect(f"{STATIC_BASE_URL}/?subscribe=pending")
         except Exception as e:
             print("SUBSCRIBE DUPLICATE RECOVERY ERROR:", e)
         return _subscribe_response(error="Email already subscribed", redirect_status="exists", status_code=409)
@@ -3620,7 +3617,7 @@ def subscribe():
 def confirm_subscriber():
     token = (request.args.get("token") or "").strip()
     if not token:
-        return redirect(f"{STATIC_BASE_URL}/index.html?subscribe=invalid")
+        return redirect(f"{STATIC_BASE_URL}/?subscribe=invalid")
 
     try:
         with conn() as db:
@@ -3629,7 +3626,7 @@ def confirm_subscriber():
                 (token,),
             ).fetchone()
             if not row:
-                return redirect(f"{STATIC_BASE_URL}/index.html?subscribe=invalid")
+                return redirect(f"{STATIC_BASE_URL}/?subscribe=invalid")
 
             if row["confirmed"] == 0:
                 db.execute(
@@ -3641,19 +3638,19 @@ def confirm_subscriber():
                     "Newsletter subscription confirmed",
                     build_newsletter_email(row["username"]),
                 )
-                return redirect(f"{STATIC_BASE_URL}/index.html?subscribe=confirmed")
+                return redirect(f"{STATIC_BASE_URL}/?subscribe=confirmed")
 
-        return redirect(f"{STATIC_BASE_URL}/index.html?subscribe=already")
+        return redirect(f"{STATIC_BASE_URL}/?subscribe=already")
     except Exception as e:
         print("CONFIRM SUBSCRIBER ERROR:", e)
-        return redirect(f"{STATIC_BASE_URL}/index.html?subscribe=failed")
+        return redirect(f"{STATIC_BASE_URL}/?subscribe=failed")
 
 
 @app.route("/unsubscribe", methods=["GET"])
 def unsubscribe_newsletter():
     token = (request.args.get("token") or "").strip()
     if not token:
-        return redirect(f"{STATIC_BASE_URL}/index.html?subscribe=invalid")
+        return redirect(f"{STATIC_BASE_URL}/?subscribe=invalid")
     try:
         with conn() as db:
             row = db.execute(
@@ -3661,13 +3658,13 @@ def unsubscribe_newsletter():
                 (token,),
             ).fetchone()
             if not row:
-                return redirect(f"{STATIC_BASE_URL}/index.html?subscribe=invalid")
+                return redirect(f"{STATIC_BASE_URL}/?subscribe=invalid")
             db.execute("UPDATE subscribers SET unsubscribed=1 WHERE id=?", (row["id"],))
             db.commit()
-        return redirect(f"{STATIC_BASE_URL}/index.html?subscribe=unsubscribed")
+        return redirect(f"{STATIC_BASE_URL}/?subscribe=unsubscribed")
     except Exception as e:
         print("UNSUBSCRIBE ERROR:", e)
-        return redirect(f"{STATIC_BASE_URL}/index.html?subscribe=failed")
+        return redirect(f"{STATIC_BASE_URL}/?subscribe=failed")
 
 
 @app.route("/api/campaigns", methods=["POST"])

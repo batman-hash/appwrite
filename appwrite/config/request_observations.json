@@ -1,0 +1,110 @@
+[
+  {
+    "ip": "127.0.0.1",
+    "request_bytes": 60,
+    "relation_bytes": 33,
+    "payload": "GET | /api/tracks/library",
+    "method": "GET",
+    "path": "/api/tracks/library",
+    "created_at": 1774984592
+  },
+  {
+    "ip": "127.0.0.1",
+    "request_bytes": 102,
+    "relation_bytes": 29,
+    "payload": "POST | /api/auth/login | {}",
+    "method": "POST",
+    "path": "/api/auth/login",
+    "created_at": 1774984592
+  },
+  {
+    "ip": "127.0.0.1",
+    "request_bytes": 53,
+    "relation_bytes": 26,
+    "payload": "GET | /api/auth/me",
+    "method": "GET",
+    "path": "/api/auth/me",
+    "created_at": 1774984592
+  },
+  {
+    "ip": "127.0.0.1",
+    "request_bytes": 51,
+    "relation_bytes": 24,
+    "payload": "GET | /api/users",
+    "method": "GET",
+    "path": "/api/users",
+    "created_at": 1774984592
+  },
+  {
+    "ip": "127.0.0.1",
+    "request_bytes": 54,
+    "relation_bytes": 27,
+    "payload": "GET | /api/users/me",
+    "method": "GET",
+    "path": "/api/users/me",
+    "created_at": 1774984592
+  },
+  {
+    "ip": "127.0.0.1",
+    "request_bytes": 60,
+    "relation_bytes": 33,
+    "payload": "GET | /api/tracks/library",
+    "method": "GET",
+    "path": "/api/tracks/library",
+    "created_at": 1774984592
+  },
+  {
+    "ip": "127.0.0.1",
+    "request_bytes": 66,
+    "relation_bytes": 39,
+    "payload": "GET | /api/uploads/shared-files",
+    "method": "GET",
+    "path": "/api/uploads/shared-files",
+    "created_at": 1774984617
+  },
+  {
+    "ip": "127.0.0.1",
+    "request_bytes": 102,
+    "relation_bytes": 29,
+    "payload": "POST | /api/auth/login | {}",
+    "method": "POST",
+    "path": "/api/auth/login",
+    "created_at": 1774984617
+  },
+  {
+    "ip": "127.0.0.1",
+    "request_bytes": 53,
+    "relation_bytes": 26,
+    "payload": "GET | /api/auth/me",
+    "method": "GET",
+    "path": "/api/auth/me",
+    "created_at": 1774984617
+  },
+  {
+    "ip": "127.0.0.1",
+    "request_bytes": 51,
+    "relation_bytes": 24,
+    "payload": "GET | /api/users",
+    "method": "GET",
+    "path": "/api/users",
+    "created_at": 1774984617
+  },
+  {
+    "ip": "127.0.0.1",
+    "request_bytes": 54,
+    "relation_bytes": 27,
+    "payload": "GET | /api/users/me",
+    "method": "GET",
+    "path": "/api/users/me",
+    "created_at": 1774984617
+  },
+  {
+    "ip": "127.0.0.1",
+    "request_bytes": 60,
+    "relation_bytes": 33,
+    "payload": "GET | /api/tracks/library",
+    "method": "GET",
+    "path": "/api/tracks/library",
+    "created_at": 1774984617
+  }
+]

@@ -55,7 +55,7 @@ if exist "%PROJECT_PID_FILE%" (
 
 if defined APP_RUNNING (
     echo App already running (PID %APP_PID%). Opening browser only.
-    start "" %BASE_URL%/index.html
+    start "" %BASE_URL%/
     goto :eof
 )
 
@@ -67,4 +67,4 @@ if defined PROJECT_RUNNING (
 
 start "CYBERGHOST Flask" cmd /k "python backend\webapp.py --host %HOST% --port %PORT%"
 timeout /t 2 >nul
-start "" %BASE_URL%/index.html
+start "" %BASE_URL%/

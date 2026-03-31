@@ -2,7 +2,7 @@
 // Keeps login/register working even when individual pages have extra scripts.
 (function () {
   const AUTH_API_BASE = `${window.location.origin}/api`;
-  const PROTECTED_REDIRECT_PATH = "/index.html";
+  const PROTECTED_REDIRECT_PATH = "/";
 
   let currentUser = null;
 
@@ -10,101 +10,97 @@
     return document.getElementById(id);
   }
 
-  function setStatusFromUrl() {
+  function setStatusMessage(text, color) {
     const statusMessage = qs("statusMessage");
     if (!statusMessage) return;
+    statusMessage.textContent = text || "";
+    statusMessage.style.color = color || "";
+  }
 
+  function setStatusFromUrl() {
     const params = new URLSearchParams(window.location.search);
     const hasAuthenticatedUser = !!currentUser || !!localStorage.getItem("user");
-    const login = params.get("login");
-    const register = params.get("register");
-    const activate = params.get("activate");
-    const subscribe = params.get("subscribe");
-    const reset = params.get("reset");
-    const user = params.get("user");
 
-    statusMessage.style.color = "";
+    if (params.get("user")) {
+      setStatusMessage("You successfully send your credentials. Access granted.");
+      return;
+    }
+    if (params.get("login") === "failed") {
+      setStatusMessage("Login failed. Please try again.", "#f0f");
+      return;
+    }
+    if (params.get("login") === "inactive") {
+      setStatusMessage("Account not activated. Check your email.", "#f0f");
+      return;
+    }
+    if (params.get("login") === "locked") {
+      setStatusMessage("Too many failed attempts. This email is locked for 24 hours.", "#f0f");
+      return;
+    }
+    if (params.get("login") === "required") {
+      if (!hasAuthenticatedUser) {
+        setStatusMessage("Login required before you can access the platform.", "#f0f");
+      }
+      return;
+    }
+    if (params.get("register") === "ok") {
+      setStatusMessage("Registration successful. Check your email to activate.");
+      return;
+    }
+    if (params.get("register") === "needed") {
+      if (!hasAuthenticatedUser) {
+        setStatusMessage("Registration required before you can access this page.", "#f0f");
+      }
+      return;
+    }
+    if (params.get("register") === "exists") {
+      setStatusMessage("Email already exists.", "#f0f");
+      return;
+    }
+    if (params.get("activate") === "ok") {
+      setStatusMessage("Account activated. You can login now.");
+      return;
+    }
+    if (params.get("activate") === "invalid") {
+      setStatusMessage("Activation link is invalid or expired.", "#f0f");
+      return;
+    }
+    if (params.get("subscribe") === "ok") {
+      setStatusMessage("You successfully send your tags.");
+      return;
+    }
+    if (params.get("subscribe") === "pending") {
+      setStatusMessage("Credentials sent successfully. Check your email to confirm subscription.");
+      return;
+    }
+    if (params.get("subscribe") === "confirmed") {
+      setStatusMessage("Subscription confirmed. Welcome to the newsletter.");
+      return;
+    }
+    if (params.get("subscribe") === "already") {
+      setStatusMessage("Subscription already confirmed for this email.");
+      return;
+    }
+    if (params.get("subscribe") === "invalid") {
+      setStatusMessage("Invalid or expired confirmation link.", "#f0f");
+      return;
+    }
+    if (params.get("reset") === "sent") {
+      setStatusMessage("Password reset email sent.");
+    }
+  }
 
-    if (user) {
-      statusMessage.textContent = "You successfully send your credentials. Access granted.";
-      return;
-    }
-    if (login === "failed") {
-      statusMessage.textContent = "Login failed. Please try again.";
-      statusMessage.style.color = "#f0f";
-      return;
-    }
-    if (login === "inactive") {
-      statusMessage.textContent = "Account not activated. Check your email.";
-      statusMessage.style.color = "#f0f";
-      return;
-    }
-    if (login === "locked") {
-      statusMessage.textContent = "Too many failed attempts. This email is locked for 24 hours.";
-      statusMessage.style.color = "#f0f";
-      return;
-    }
-    if (login === "required") {
-      if (hasAuthenticatedUser) {
-        statusMessage.textContent = "";
-        return;
-      }
-      statusMessage.textContent = "Login required before you can access the platform.";
-      statusMessage.style.color = "#f0f";
-      return;
-    }
-    if (register === "ok") {
-      statusMessage.textContent = "Registration successful. Check your email to activate.";
-      return;
-    }
-    if (register === "needed") {
-      if (hasAuthenticatedUser) {
-        statusMessage.textContent = "";
-        return;
-      }
-      statusMessage.textContent = "Registration required before you can access this page.";
-      statusMessage.style.color = "#f0f";
-      return;
-    }
-    if (register === "exists") {
-      statusMessage.textContent = "Email already exists.";
-      statusMessage.style.color = "#f0f";
-      return;
-    }
-    if (activate === "ok") {
-      statusMessage.textContent = "Account activated. You can login now.";
-      return;
-    }
-    if (activate === "invalid") {
-      statusMessage.textContent = "Activation link is invalid or expired.";
-      statusMessage.style.color = "#f0f";
-      return;
-    }
-    if (subscribe === "ok") {
-      statusMessage.textContent = "You successfully send your tags.";
-      return;
-    }
-    if (subscribe === "pending") {
-      statusMessage.textContent = "Credentials sent successfully. Check your email to confirm subscription.";
-      return;
-    }
-    if (subscribe === "confirmed") {
-      statusMessage.textContent = "Subscription confirmed. Welcome to the newsletter.";
-      return;
-    }
-    if (subscribe === "already") {
-      statusMessage.textContent = "Subscription already confirmed for this email.";
-      return;
-    }
-    if (subscribe === "invalid") {
-      statusMessage.textContent = "Invalid or expired confirmation link.";
-      statusMessage.style.color = "#f0f";
-      return;
-    }
-    if (reset === "sent") {
-      statusMessage.textContent = "Password reset email sent.";
-      return;
-    }
+  function updateAuthUi(isSignedIn) {
+    const authLinks = qs("authLinks");
+    const userLinks = qs("userLinks");
+    const openLogin = qs("openLogin");
+    const openRegister = qs("openRegister");
+    const logoutBtn = qs("logoutBtn");
+    if (authLinks) authLinks.classList.toggle("hidden", !!isSignedIn);
+    if (userLinks) userLinks.classList.toggle("hidden", !isSignedIn);
+    if (openLogin) openLogin.classList.toggle("hidden", !!isSignedIn);
+    if (openRegister) openRegister.classList.toggle("hidden", !!isSignedIn);
+    if (logoutBtn) logoutBtn.classList.toggle("hidden", !isSignedIn && !!userLinks);
   }
 
   function setUser(user) {
@@ -117,44 +113,22 @@
     currentUser = normalized;
     localStorage.setItem("user", JSON.stringify(normalized));
 
-    const authLinks = qs("authLinks");
-    const userLinks = qs("userLinks");
     const usernameLabel = qs("usernameLabel");
-    const openLogin = qs("openLogin");
-    const openRegister = qs("openRegister");
-    const logoutBtn = qs("logoutBtn");
-
-    if (authLinks) authLinks.classList.add("hidden");
-    if (userLinks) userLinks.classList.remove("hidden");
-    if (openLogin) openLogin.classList.add("hidden");
-    if (openRegister) openRegister.classList.add("hidden");
-    if (logoutBtn) logoutBtn.classList.remove("hidden");
+    updateAuthUi(true);
     if (usernameLabel) usernameLabel.textContent = normalized.username.toUpperCase();
   }
 
   function clearUser() {
     currentUser = null;
     localStorage.removeItem("user");
-
-    const authLinks = qs("authLinks");
-    const userLinks = qs("userLinks");
     const usernameLabel = qs("usernameLabel");
-    const openLogin = qs("openLogin");
-    const openRegister = qs("openRegister");
-    const logoutBtn = qs("logoutBtn");
-
-    if (authLinks) authLinks.classList.remove("hidden");
-    if (userLinks) userLinks.classList.add("hidden");
-    if (openLogin) openLogin.classList.remove("hidden");
-    if (openRegister) openRegister.classList.remove("hidden");
-    if (logoutBtn && !userLinks) logoutBtn.classList.add("hidden");
+    updateAuthUi(false);
     if (usernameLabel) usernameLabel.textContent = "";
   }
 
   function restoreUser() {
     const stored = localStorage.getItem("user");
     if (!stored) return;
-
     try {
       setUser(JSON.parse(stored));
     } catch (_err) {
@@ -170,7 +144,7 @@
     setUser({ username: urlUser, email: "", role: "user" });
     params.delete("user");
     const query = params.toString();
-    const newUrl = `${window.location.pathname}${query ? "?" + query : ""}`;
+    const newUrl = `${window.location.pathname}${query ? `?${query}` : ""}`;
     window.history.replaceState({}, document.title, newUrl);
   }
 
@@ -186,7 +160,6 @@
     const loginForm = qs("loginForm");
     const registerForm = qs("registerForm");
     const forgotForm = qs("forgotForm");
-
     const forms = [loginForm, registerForm, forgotForm];
 
     const openLogin = qs("openLogin");
@@ -210,48 +183,14 @@
       overlay.classList.remove("active");
     }
 
-    // Default state: keep forms separated, show login only.
-    if (loginForm) {
-      showOnly(loginForm, forms);
-    }
-
-    if (openLogin && overlay && loginForm) {
-      openLogin.addEventListener("click", function () {
-        openOverlay(loginForm);
-      });
-    }
-    if (openRegister && overlay && registerForm) {
-      openRegister.addEventListener("click", function () {
-        openOverlay(registerForm);
-      });
-    }
-    if (toRegister && registerForm) {
-      toRegister.addEventListener("click", function () {
-        if (overlay) openOverlay(registerForm);
-        else showOnly(registerForm, forms);
-      });
-    }
-    if (toLogin && loginForm) {
-      toLogin.addEventListener("click", function () {
-        if (overlay) openOverlay(loginForm);
-        else showOnly(loginForm, forms);
-      });
-    }
-    if (toForgot && forgotForm) {
-      toForgot.addEventListener("click", function () {
-        if (overlay) openOverlay(forgotForm);
-        else showOnly(forgotForm, forms);
-      });
-    }
-    if (backToLogin && loginForm) {
-      backToLogin.addEventListener("click", function () {
-        if (overlay) openOverlay(loginForm);
-        else showOnly(loginForm, forms);
-      });
-    }
-    if (closeBtn) {
-      closeBtn.addEventListener("click", closeOverlay);
-    }
+    if (loginForm) showOnly(loginForm, forms);
+    if (openLogin && overlay && loginForm) openLogin.addEventListener("click", function () { openOverlay(loginForm); });
+    if (openRegister && overlay && registerForm) openRegister.addEventListener("click", function () { openOverlay(registerForm); });
+    if (toRegister && registerForm) toRegister.addEventListener("click", function () { overlay ? openOverlay(registerForm) : showOnly(registerForm, forms); });
+    if (toLogin && loginForm) toLogin.addEventListener("click", function () { overlay ? openOverlay(loginForm) : showOnly(loginForm, forms); });
+    if (toForgot && forgotForm) toForgot.addEventListener("click", function () { overlay ? openOverlay(forgotForm) : showOnly(forgotForm, forms); });
+    if (backToLogin && loginForm) backToLogin.addEventListener("click", function () { overlay ? openOverlay(loginForm) : showOnly(loginForm, forms); });
+    if (closeBtn) closeBtn.addEventListener("click", closeOverlay);
     if (overlay) {
       overlay.addEventListener("click", function (e) {
         if (e.target === overlay) closeOverlay();
@@ -441,5 +380,3 @@
     },
   };
 })();
-
-

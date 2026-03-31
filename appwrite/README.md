@@ -35,9 +35,18 @@ The goal of this project is to create a central hub where music creators can dis
 
 ## ⚛️ React Frontend
 
-- The front end is now served from a single React entry at `frontend/react_app.html`.
-- Legacy `.html` routes still work, but Flask now routes them into that one shell.
-- The existing audio, image, video, and PDF assets stay in `frontend/assets/` so the React page can keep using them.
+- The front end still has the live single-file shell at `frontend/react_app.html`.
+- The JSX source extracted from that shell now lives in `frontend/src/App.jsx` and `frontend/src/main.jsx`.
+- The old standalone HTML pages have been removed from the repo.
+- Legacy `.html` routes still work because Flask routes them into the same shell.
+- The existing audio, image, video, and PDF assets stay in `frontend/assets/` so the React source can keep using them.
+
+## 🧩 Modular Flask Backend
+
+- The new Flask package lives under `backend/app/` with `routes/`, `services/`, `models/`, `schemas/`, `utils/`, and `middleware/`.
+- Launch the modular entrypoint with `python3 backend/run.py` or `python3 -m backend.run`.
+- The modular app attaches to the existing Flask instance, so the legacy routes and the new organized API routes share the same SQLite database and session state.
+- New organized API prefixes are available for `auth`, `users`, `tracks`, and `uploads` under `/api/auth`, `/api/users`, `/api/tracks`, and `/api/uploads`.
 
 ## 📌 Status
 
