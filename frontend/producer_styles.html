@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CYBERGHOST - PRODUCER STYLES</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&display=swap');
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      font-family: 'Orbitron', sans-serif;
+      background: #000;
+      color: #e6e6e6;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    #bg-video {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: -10;
+      opacity: 0.25;
+      filter: brightness(0.5);
+    }
+
+    nav {
+      position: fixed;
+      top: 0;
+      width: 100%;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      gap: 30px;
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(0, 255, 255, 0.2);
+      z-index: 1000;
+    }
+
+    nav a {
+      color: #0ff;
+      text-decoration: none;
+      font-size: 0.9em;
+      letter-spacing: 2px;
+      transition: all 0.3s ease;
+    }
+
+    nav a:hover {
+      color: #f0f;
+      text-shadow: 0 0 15px rgba(255, 0, 255, 0.8);
+    }
+
+    .auth-links {
+      position: absolute;
+      right: 25px;
+      top: 15px;
+      display: flex;
+      gap: 10px;
+    }
+
+    .neon-btn {
+      padding: 8px 20px;
+      border: 1px solid #0ff;
+      border-radius: 25px;
+      background: transparent;
+      color: #0ff;
+      font-size: 0.75em;
+      cursor: pointer;
+      letter-spacing: 1px;
+      transition: all 0.3s ease;
+    }
+
+    .neon-btn:hover {
+      background: rgba(0, 255, 255, 0.1);
+      box-shadow: 0 0 20px rgba(0, 255, 255, 0.4);
+    }
+
+    .neon-btn.alt {
+      border-color: #f0f;
+      color: #f0f;
+    }
+
+    .neon-btn.alt:hover {
+      background: rgba(255, 0, 255, 0.1);
+      box-shadow: 0 0 20px rgba(255, 0, 255, 0.4);
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    header {
+      text-align: center;
+      padding: 140px 20px 40px;
+    }
+
+    h1 {
+      font-size: 2.5em;
+      font-weight: 700;
+      background: linear-gradient(135deg, #f0f 0%, #0ff 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    h1.secret-armed {
+      filter: drop-shadow(0 0 18px rgba(0, 255, 255, 0.45));
+      transform: scale(1.03);
+      transition: transform 0.25s ease, filter 0.25s ease;
+    }
+
+    header p {
+      color: #888;
+      font-size: 0.9em;
+      letter-spacing: 3px;
+      margin-top: 10px;
+      text-transform: uppercase;
+    }
+
+    .main-container {
+      max-width: 76%;
+      margin: 0 auto;
+      padding: 0 20px 80px;
+    }
+
+    .section {
+      background: linear-gradient(180deg, rgba(20, 20, 35, 0.9) 0%, rgba(10, 10, 20, 0.95) 100%);
+      border: 1px solid rgba(0, 255, 255, 0.2);
+      border-radius: 15px;
+      padding: 30px;
+      margin-bottom: 24px;
+      box-shadow: 0 0 30px rgba(0, 255, 255, 0.05);
+    }
+
+    .section h2 {
+      color: #0ff;
+      font-size: 1.05em;
+      letter-spacing: 2px;
+      margin-bottom: 14px;
+    }
+
+    .section p {
+      color: #a9a9a9;
+      font-size: 0.86em;
+      line-height: 1.7;
+    }
+
+    .topics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 14px;
+      margin-top: 10px;
+    }
+
+    .topic-card {
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(255, 0, 255, 0.2);
+      border-radius: 12px;
+      padding: 16px;
+      transition: all 0.25s ease;
+    }
+
+    .topic-card:hover {
+      border-color: rgba(0, 255, 255, 0.45);
+      transform: translateY(-2px);
+    }
+
+    .topic-card.topic-link {
+      cursor: pointer;
+    }
+
+    .topic-card.topic-link.armed {
+      border-color: rgba(0, 255, 255, 0.5);
+      box-shadow: 0 0 18px rgba(0, 255, 255, 0.18);
+    }
+
+    .topic-card h3 {
+      font-size: 0.84em;
+      color: #f0f;
+      margin-bottom: 9px;
+      letter-spacing: 1px;
+    }
+
+    .topic-card p {
+      color: #9a9a9a;
+      font-size: 0.75em;
+      line-height: 1.6;
+    }
+
+    .secret-launch {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .secret-launch-copy {
+      flex: 1 1 320px;
+    }
+
+    .secret-launch-copy p {
+      color: #a9a9a9;
+      font-size: 0.82em;
+      line-height: 1.7;
+      margin-top: 10px;
+    }
+
+    .secret-launch-btn {
+      padding: 12px 20px;
+      border: 1px solid rgba(0, 255, 255, 0.35);
+      border-radius: 999px;
+      background: transparent;
+      color: #0ff;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.76em;
+      letter-spacing: 1px;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      min-width: 220px;
+    }
+
+    .secret-launch-btn:hover {
+      color: #f0f;
+      border-color: rgba(255, 0, 255, 0.45);
+      box-shadow: 0 0 16px rgba(255, 0, 255, 0.2);
+    }
+
+    .tips-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 10px 16px;
+      list-style: none;
+      margin-top: 10px;
+    }
+
+    .tips-list li {
+      padding: 10px 12px;
+      border: 1px solid rgba(0, 255, 255, 0.15);
+      border-radius: 10px;
+      font-size: 0.78em;
+      color: #a4a4a4;
+      background: rgba(0, 0, 0, 0.25);
+    }
+
+    footer {
+      text-align: center;
+      padding: 40px;
+      color: #333;
+      font-size: 0.75em;
+      letter-spacing: 2px;
+    }
+
+    .immageme-widget {
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: min(18vw, 120px);
+      aspect-ratio: 1 / 1;
+      object-fit: cover;
+      border-radius: 50%;
+      clip-path: circle(49% at 50% 50%);
+      border: 2px solid rgba(0, 255, 255, 0.52);
+      background: rgba(0, 0, 0, 0.3);
+      transform: translate(16px, calc(100vh - 140px)) rotate(0deg);
+      opacity: 0.96;
+      pointer-events: none;
+      z-index: 1900;
+      filter:
+        drop-shadow(0 0 14px rgba(0, 255, 255, 0.32))
+        saturate(1.08);
+      will-change: transform;
+    }
+
+    @media (max-width: 900px) {
+      .main-container {
+        max-width: 100%;
+      }
+    }
+
+    @media (max-width: 768px) {
+      nav {
+        flex-wrap: wrap;
+        row-gap: 10px;
+        column-gap: 10px;
+        padding: 12px 8px;
+      }
+
+      nav a, nav button {
+        font-size: 0.78rem;
+      }
+
+      header {
+        margin-top: 72px;
+        padding: 0 14px 24px;
+      }
+
+      h1 {
+        font-size: clamp(1.3rem, 6vw, 2rem);
+      }
+
+      .section {
+        padding: 14px;
+      }
+
+      .auth-links {
+        position: static;
+      }
+    }
+  </style>
+</head>
+<body>
+  <video id="bg-video" autoplay muted loop playsinline poster="videos/drone.png"></video>
+
+  <nav>
+    <a href="index.html">HOME</a>
+    <a href="Posterwall.html">POSTERWALL</a>
+    <a href="shop.html">SHOP</a>
+    <a href="room.html">THE ROOM</a>
+    <a href="contact.html">CONTACT</a>
+
+    <div class="auth-links" id="authLinks">
+      <button class="neon-btn" id="openLogin">LOGIN</button>
+      <button class="neon-btn alt" id="openRegister">REGISTER</button>
+    </div>
+
+    <div class="auth-links hidden" id="userLinks">
+      <span id="usernameLabel" style="color:#0ff;font-size:.7em;margin-right:10px;"></span>
+      <button class="neon-btn alt" id="logoutBtn">LOGOUT</button>
+    </div>
+  </nav>
+
+  <header>
+    <h1 id="headerTitle">PRODUCER STYLES</h1>
+    <p id="headerSubtitle">Genres · Workflow · Live Performance · DAW Craft</p>
+  </header>
+
+  <main class="main-container">
+    <section class="section">
+      <h2>// ABOUT PRODUCER STYLES</h2>
+      <p>
+        This space is for producers who want to discuss how tracks are made from idea to final master:
+        style choices, arrangement, sound design, mixing, and live execution. Share your methods,
+        session structure, and production decisions.
+      </p>
+    </section>
+
+    <section class="section">
+      <h2>// PRODUCER TOPICS</h2>
+      <div class="topics-grid">
+        <article class="topic-card">
+          <h3>GENRES & HYBRID STYLES</h3>
+          <p>Techno, house, trap, bass, ambient and hybrid crossovers. Why a style works and where it breaks.</p>
+        </article>
+        <article class="topic-card">
+          <h3>DAW WORKFLOW</h3>
+          <p>Template setup, routing, busses, markers, macro controls, and faster arrangement workflows.</p>
+        </article>
+        <article class="topic-card topic-link" id="soundDesignTopicCard">
+          <h3 id="soundDesignTopicTitle">SOUND DESIGN</h3>
+          <p id="soundDesignTopicDesc">How to build leads, plucks, basses, textures, and drum layers with synths and effects chains.</p>
+        </article>
+        <article class="topic-card">
+          <h3>ARRANGEMENT LOGIC</h3>
+          <p>Energy curves, intro-to-drop transitions, fills, automation, and storytelling with structure.</p>
+        </article>
+        <article class="topic-card">
+          <h3>MIXING & MASTERING</h3>
+          <p>EQ priorities, dynamics control, stereo width, loudness targets, and final playback checks.</p>
+        </article>
+        <article class="topic-card">
+          <h3>PLAYING LIVE</h3>
+          <p>Live set prep, stem organization, controller mapping, fallback plans, and stage-ready sessions.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>// PRODUCER DISCUSSION PROMPTS</h2>
+      <ul class="tips-list">
+        <li>How do you start: drums first, chords first, or sound design first?</li>
+        <li>Which DAW specs help you most for heavy projects (CPU, RAM, buffer strategy)?</li>
+        <li>What plugin chain do you use for your main lead and why?</li>
+        <li>How do you keep low-end clean between kick and bass?</li>
+        <li>How do you prepare a track to perform live without project crashes?</li>
+        <li>What separates a producer beat from a release-ready record?</li>
+      </ul>
+    </section>
+
+    <section class="section">
+      <h2>// HIDDEN SOUND DESIGN ACCESS</h2>
+      <div class="secret-launch">
+        <div class="secret-launch-copy">
+          <p>Use this hidden access button if you want a slower unlock path into the sound design page.</p>
+        </div>
+        <button type="button" class="secret-launch-btn" id="soundDesignUnlockBtn">SOUND DESIGN 0 / 6</button>
+      </div>
+    </section>
+  </main>
+
+  <footer>2026 CYBERGHOST</footer>
+  <img
+    src="assets/images/immageme.png"
+    alt="Immageme widget"
+    id="immagemeWidget"
+    class="immageme-widget"
+  >
+
+  <script>
+    const headerTitle = document.getElementById("headerTitle");
+    const headerSubtitle = document.getElementById("headerSubtitle");
+    const soundDesignUnlockBtn = document.getElementById("soundDesignUnlockBtn");
+    const soundDesignTopicCard = document.getElementById("soundDesignTopicCard");
+    const soundDesignTopicTitle = document.getElementById("soundDesignTopicTitle");
+    const soundDesignTopicDesc = document.getElementById("soundDesignTopicDesc");
+    let secretClicks = 0;
+    let secretTimer = null;
+    let buttonClicks = 0;
+    let buttonTimer = null;
+    let topicClicks = 0;
+    let topicTimer = null;
+    const defaultTitle = headerTitle ? headerTitle.textContent : "PRODUCER STYLES";
+    const defaultTopicTitle = soundDesignTopicTitle ? soundDesignTopicTitle.textContent : "SOUND DESIGN";
+    const defaultTopicDesc = soundDesignTopicDesc ? soundDesignTopicDesc.textContent : "How to build leads, plucks, basses, textures, and drum layers with synths and effects chains.";
+    const defaultSubtitle = headerSubtitle ? headerSubtitle.textContent : "Genres · Workflow · Live Performance · DAW Craft";
+
+    function resetSecretState() {
+      if (headerTitle) {
+        headerTitle.textContent = defaultTitle;
+        headerTitle.classList.remove("secret-armed");
+      }
+      if (headerSubtitle) {
+        headerSubtitle.textContent = defaultSubtitle;
+      }
+    }
+
+    if (headerTitle) {
+      headerTitle.style.cursor = "pointer";
+      headerTitle.addEventListener("click", () => {
+        secretClicks += 1;
+        if (secretTimer) clearTimeout(secretTimer);
+        secretTimer = setTimeout(() => {
+          secretClicks = 0;
+          resetSecretState();
+          secretTimer = null;
+        }, 3000);
+
+        if (secretClicks === 2) {
+          headerTitle.textContent = "SOUND DESIGN";
+          headerTitle.classList.add("secret-armed");
+          if (headerSubtitle) {
+            headerSubtitle.textContent = "One more slow click opens the hidden page";
+          }
+          return;
+        }
+
+        if (secretClicks >= 3) {
+          window.location.href = "sound_design.html";
+        }
+      });
+    }
+
+    if (soundDesignUnlockBtn) {
+      soundDesignUnlockBtn.addEventListener("click", () => {
+        buttonClicks += 1;
+        soundDesignUnlockBtn.textContent = `SOUND DESIGN ${buttonClicks} / 6`;
+        if (buttonTimer) clearTimeout(buttonTimer);
+        buttonTimer = setTimeout(() => {
+          buttonClicks = 0;
+          soundDesignUnlockBtn.textContent = "SOUND DESIGN 0 / 6";
+          buttonTimer = null;
+        }, 5000);
+
+        if (buttonClicks >= 6) {
+          soundDesignUnlockBtn.textContent = "OPENING SOUND DESIGN...";
+          window.location.href = "sound_design.html";
+        }
+      });
+    }
+
+    if (soundDesignTopicCard) {
+      soundDesignTopicCard.addEventListener("click", () => {
+        topicClicks += 1;
+        soundDesignTopicCard.classList.add("armed");
+        if (topicTimer) clearTimeout(topicTimer);
+        topicTimer = setTimeout(() => {
+          topicClicks = 0;
+          soundDesignTopicCard.classList.remove("armed");
+          if (soundDesignTopicTitle) {
+            soundDesignTopicTitle.textContent = defaultTopicTitle;
+          }
+          if (soundDesignTopicDesc) {
+            soundDesignTopicDesc.textContent = defaultTopicDesc;
+          }
+          topicTimer = null;
+        }, 4000);
+
+        if (topicClicks >= 4) {
+          window.location.href = "sound_design.html";
+        }
+      });
+    }
+
+    const authLinks = document.getElementById("authLinks");
+    const userLinks = document.getElementById("userLinks");
+    const usernameLabel = document.getElementById("usernameLabel");
+    const logoutBtn = document.getElementById("logoutBtn");
+
+    function setUser(user) {
+      localStorage.setItem("user", JSON.stringify(user));
+      authLinks.classList.add("hidden");
+      userLinks.classList.remove("hidden");
+      usernameLabel.textContent = (user.username || "USER").toUpperCase();
+    }
+
+    function clearUser() {
+      localStorage.removeItem("user");
+      userLinks.classList.add("hidden");
+      authLinks.classList.remove("hidden");
+    }
+
+    document.getElementById("openLogin").onclick = () => {
+      window.location.href = "index.html";
+    };
+    document.getElementById("openRegister").onclick = () => {
+      window.location.href = "index.html";
+    };
+    logoutBtn.onclick = async () => {
+      try {
+        await fetch("/logout", { credentials: "include" });
+      } catch (_err) {
+        // Keep UI behavior consistent even on network failure.
+      }
+      clearUser();
+    };
+
+    const stored = localStorage.getItem("user");
+    if (stored) {
+      try {
+        setUser(JSON.parse(stored));
+      } catch (_err) {
+        clearUser();
+      }
+    }
+
+    const immagemeWidget = document.getElementById("immagemeWidget");
+
+    function positionImmagemeByScroll() {
+      if (!immagemeWidget) return;
+
+      const doc = document.documentElement;
+      const maxScroll = Math.max(1, doc.scrollHeight - window.innerHeight);
+      const progress = Math.min(1, Math.max(0, window.scrollY / maxScroll));
+
+      const pad = 16;
+      const size = immagemeWidget.getBoundingClientRect().width || 96;
+      const left = pad;
+      const top = pad + 68;
+      const right = Math.max(left, window.innerWidth - size - pad);
+      const bottom = Math.max(top, window.innerHeight - size - pad);
+      const perimeter = (right - left) * 2 + (bottom - top) * 2;
+      let d = progress * perimeter;
+
+      let x = left;
+      let y = bottom;
+      if (d <= right - left) {
+        x = left + d;
+        y = bottom;
+      } else if ((d -= (right - left)) <= bottom - top) {
+        x = right;
+        y = bottom - d;
+      } else if ((d -= (bottom - top)) <= right - left) {
+        x = right - d;
+        y = top;
+      } else {
+        d -= (right - left);
+        x = left;
+        y = top + d;
+      }
+
+      const rot = progress * 1080;
+      immagemeWidget.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px) rotate(${rot}deg)`;
+    }
+
+    window.addEventListener("load", positionImmagemeByScroll);
+    window.addEventListener("resize", positionImmagemeByScroll);
+    window.addEventListener("scroll", positionImmagemeByScroll, { passive: true });
+  </script>
+</body>
+</html>

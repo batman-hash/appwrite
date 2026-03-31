@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CYBERGHOST - PARTY AND EVENTS</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      font-family: 'Orbitron', sans-serif;
+      background: #000;
+      color: #e6e6e6;
+      min-height: 100vh;
+    }
+
+    nav {
+      position: fixed;
+      top: 0;
+      width: 100%;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      gap: 30px;
+      background: rgba(0, 0, 0, 0.8);
+      border-bottom: 1px solid rgba(0, 255, 255, 0.2);
+      z-index: 1000;
+    }
+
+    nav a {
+      color: #0ff;
+      text-decoration: none;
+      font-size: 0.9em;
+      letter-spacing: 2px;
+    }
+
+    nav a.active {
+      color: #f0f;
+      text-shadow: 0 0 10px rgba(255, 0, 255, 0.5);
+    }
+
+    header {
+      text-align: center;
+      padding: 130px 20px 30px;
+    }
+
+    h1 {
+      font-size: 2.2em;
+      background: linear-gradient(135deg, #f0f 0%, #0ff 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    header p {
+      color: #888;
+      font-size: 0.85em;
+      letter-spacing: 2px;
+      margin-top: 8px;
+      text-transform: uppercase;
+    }
+
+    .main-container {
+      max-width: 70%;
+      margin: 0 auto;
+      padding: 0 20px 60px;
+    }
+
+    .grid-section {
+      background: linear-gradient(180deg, rgba(20, 20, 35, 0.9) 0%, rgba(10, 10, 20, 0.95) 100%);
+      border: 1px solid rgba(0, 255, 255, 0.2);
+      border-radius: 15px;
+      padding: 30px;
+      margin-bottom: 25px;
+      box-shadow: 0 0 30px rgba(0, 255, 255, 0.05);
+    }
+
+    .grid-section h2 {
+      color: #0ff;
+      font-size: 1.1em;
+      margin-bottom: 18px;
+      letter-spacing: 2px;
+      border-bottom: 1px solid rgba(0, 255, 255, 0.2);
+      padding-bottom: 10px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 15px;
+    }
+
+    .card {
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(255, 0, 255, 0.2);
+      border-radius: 10px;
+      padding: 18px;
+      transition: all 0.25s ease;
+    }
+
+    .card:hover {
+      border-color: #f0f;
+      transform: translateY(-2px);
+      box-shadow: 0 5px 18px rgba(255, 0, 255, 0.2);
+    }
+
+    .card h3 {
+      color: #f0f;
+      font-size: 0.9em;
+      margin-bottom: 8px;
+      letter-spacing: 1px;
+    }
+
+    .card p {
+      color: #8b8b8b;
+      font-size: 0.75em;
+      line-height: 1.45;
+      margin-bottom: 12px;
+    }
+
+    .btn {
+      display: inline-block;
+      padding: 8px 14px;
+      border: 1px solid rgba(0, 255, 255, 0.35);
+      border-radius: 999px;
+      color: #0ff;
+      text-decoration: none;
+      font-size: 0.7em;
+      letter-spacing: 1px;
+    }
+
+    .btn:hover {
+      border-color: #f0f;
+      color: #f0f;
+    }
+
+    .highlight-section {
+      background: linear-gradient(180deg, rgba(28, 18, 40, 0.92) 0%, rgba(12, 10, 25, 0.98) 100%);
+      border: 1px solid rgba(240, 0, 255, 0.35);
+      border-radius: 15px;
+      padding: 28px;
+      margin-bottom: 25px;
+      box-shadow: 0 0 26px rgba(240, 0, 255, 0.15);
+    }
+
+    .highlight-section h2 {
+      color: #f0f;
+      font-size: 1.1em;
+      letter-spacing: 2px;
+      margin-bottom: 14px;
+      border-bottom: 1px solid rgba(240, 0, 255, 0.3);
+      padding-bottom: 10px;
+    }
+
+    .event-highlight-list {
+      list-style: none;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+    }
+
+    .event-highlight-list li {
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(0, 255, 255, 0.25);
+      border-left: 4px solid #f0f;
+      border-radius: 10px;
+      padding: 14px;
+      font-size: 0.8em;
+      line-height: 1.45;
+    }
+
+    .event-highlight-list .date {
+      display: block;
+      color: #0ff;
+      font-size: 0.75em;
+      letter-spacing: 1px;
+      margin-bottom: 5px;
+    }
+  
+  /* === RESPONSIVE PATCH === */
+  img, video, canvas {
+    max-width: 100%;
+    height: auto;
+  }
+
+  nav {
+    flex-wrap: wrap;
+  }
+
+  @media (max-width: 1024px) {
+    nav {
+      gap: 14px !important;
+      padding: 14px !important;
+    }
+
+    header {
+      padding-left: 16px !important;
+      padding-right: 16px !important;
+    }
+
+    .wrap,
+    .container,
+    .contact-container,
+    .poster-grid-container,
+    .chat-section,
+    .auth-window,
+    .player,
+    .panel {
+      width: min(100%, 980px) !important;
+      margin-left: auto !important;
+      margin-right: auto !important;
+    }
+  }
+
+  @media (max-width: 768px) {
+    html, body {
+      font-size: 15px;
+    }
+
+    nav {
+      justify-content: center !important;
+      row-gap: 10px !important;
+      column-gap: 10px !important;
+      padding: 10px 8px !important;
+    }
+
+    nav a,
+    nav button {
+      font-size: 0.78rem !important;
+      padding: 8px 10px !important;
+    }
+
+    header {
+      margin-top: 82px !important;
+      padding: 0 12px !important;
+      text-align: center !important;
+    }
+
+    h1 {
+      font-size: clamp(1.3rem, 6vw, 2rem) !important;
+      line-height: 1.2;
+    }
+
+    h2 {
+      font-size: clamp(1rem, 5vw, 1.5rem) !important;
+    }
+
+    .auth-window,
+    .contact-form-wrapper,
+    .chat-section,
+    .card,
+    .player,
+    .panel {
+      width: calc(100% - 20px) !important;
+      max-width: 100% !important;
+      margin-left: auto !important;
+      margin-right: auto !important;
+      padding: 12px !important;
+    }
+
+    .poster-grid,
+    .events-grid,
+    .cards-grid,
+    .topics-grid,
+    .playlist-grid,
+    .shop-grid,
+    .panel {
+      grid-template-columns: 1fr !important;
+      gap: 12px !important;
+    }
+
+    .chat-messages {
+      height: 46vh !important;
+      min-height: 260px;
+      max-height: 58vh;
+    }
+
+    .chat-input-area,
+    .row {
+      flex-wrap: wrap !important;
+    }
+
+    .chat-input-area input,
+    .chat-input-area button,
+    input,
+    select,
+    textarea,
+    button {
+      width: 100%;
+      max-width: 100%;
+    }
+  }
+
+  @media (max-width: 420px) {
+    html, body {
+      font-size: 14px;
+    }
+
+    nav a,
+    nav button {
+      font-size: 0.72rem !important;
+      letter-spacing: 0.04em !important;
+    }
+
+    .chat-messages {
+      height: 44vh !important;
+    }
+  }
+</style>
+</head>
+<body>
+  <nav>
+    <a href="index.html">HOME</a>
+    <a href="Posterwall.html">POSTERWALL</a>
+    <a href="shop.html">SHOP</a>
+    <a href="room.html" class="active">THE ROOM</a>
+    <a href="contact.html">CONTACT</a>
+  </nav>
+
+  <header>
+    <h1>PARTY AND EVENTS</h1>
+    <p>Feste e Eventi - Highlights for the community</p>
+  </header>
+
+  <div class="main-container">
+    <section class="highlight-section">
+      <h2>// EVENT HIGHLIGHTS</h2>
+      <ul class="event-highlight-list">
+        <li><span class="date">MAR 15</span><strong>Berlin Tech Night</strong><br>Live DJ sets, visuals, and producer networking.</li>
+        <li><span class="date">APR 02</span><strong>Amsterdam Synth Meetup</strong><br>Analog jam session and hardware showcase.</li>
+        <li><span class="date">APR 20</span><strong>Milano Electronic</strong><br>Live PA performance and sound design workshop.</li>
+        <li><span class="date">MAY 10</span><strong>Rome Bass Session</strong><br>Underground bass party with open deck slots.</li>
+      </ul>
+    </section>
+
+    <section class="grid-section">
+      <h2>// PLUGIN GRID</h2>
+      <div class="grid">
+        <div class="card">
+          <h3>PLUGIN PICKS</h3>
+          <p>Community picks for synth, FX, and creative tools used in room sessions.</p>
+          <a class="btn" href="shop.html">OPEN PLUGINS</a>
+        </div>
+        <div class="card">
+          <h3>VST UPLOAD</h3>
+          <p>Upload your own presets, patch banks, and plugin snapshots for event sharing.</p>
+          <a class="btn" href="shop.html">UPLOAD VST</a>
+        </div>
+        <div class="card">
+          <h3>VST DOWNLOAD</h3>
+          <p>Download curated VST resources and packs from room events and sessions.</p>
+          <a class="btn" href="shop.html">DOWNLOAD VST</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="grid-section">
+      <h2>// EVENTS GRID</h2>
+      <div class="grid">
+        <div class="card">
+          <h3>LOCAL PARTY FILES</h3>
+          <p>Session notes and files grouped by date for each party and meetup.</p>
+          <a class="btn" href="room.html">BACK TO ROOM</a>
+        </div>
+        <div class="card">
+          <h3>EVENT PRESETS</h3>
+          <p>Preset collections prepared for live showcases and producer battles.</p>
+          <a class="btn" href="Posterwall.html">VIEW COLLECTION</a>
+        </div>
+        <div class="card">
+          <h3>DOWNLOAD HUB</h3>
+          <p>Central grid for plugin and VST downloads related to room events.</p>
+          <a class="btn" href="recmp3.html">OPEN HUB</a>
+        </div>
+      </div>
+    </section>
+  </div>
+</body>
+</html>
+

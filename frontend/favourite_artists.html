@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CYBERGHOST - FAVOURITE ARTISTS</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      min-height: 100vh;
+      font-family: 'Orbitron', sans-serif;
+      background:
+        radial-gradient(circle at center top, rgba(255, 0, 255, 0.13), transparent 30%),
+        linear-gradient(180deg, #05070c 0%, #0b1020 55%, #04060a 100%);
+      color: #edf4ff;
+    }
+
+    nav {
+      position: sticky;
+      top: 0;
+      display: flex;
+      justify-content: center;
+      gap: 28px;
+      padding: 18px;
+      background: rgba(0, 0, 0, 0.82);
+      border-bottom: 1px solid rgba(0, 255, 255, 0.18);
+      backdrop-filter: blur(10px);
+    }
+
+    nav a {
+      color: #0ff;
+      text-decoration: none;
+      font-size: 0.86em;
+      letter-spacing: 2px;
+    }
+
+    nav a.active { color: #f0f; }
+
+    .page {
+      width: min(1100px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 54px 0 70px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      font-size: clamp(2rem, 4vw, 3.2rem);
+      background: linear-gradient(135deg, #f0f, #0ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    header p {
+      margin-top: 12px;
+      color: #9baab6;
+      font-size: 0.86em;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    .panel {
+      background: rgba(8, 14, 24, 0.9);
+      border: 1px solid rgba(0, 255, 255, 0.18);
+      border-radius: 18px;
+      padding: 26px;
+      margin-bottom: 20px;
+      box-shadow: 0 0 30px rgba(0, 255, 255, 0.06);
+    }
+
+    .panel h2 {
+      color: #0ff;
+      margin-bottom: 14px;
+      font-size: 1.02em;
+      letter-spacing: 2px;
+    }
+
+    .panel p, .panel li {
+      color: #a7b4c0;
+      font-size: 0.88em;
+      line-height: 1.7;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+    }
+
+    .card {
+      border: 1px solid rgba(255, 0, 255, 0.22);
+      border-radius: 14px;
+      padding: 18px;
+      background: rgba(0, 0, 0, 0.28);
+    }
+
+    .card h3 {
+      color: #f0f;
+      margin-bottom: 8px;
+      font-size: 0.86em;
+    }
+
+    .cta {
+      display: inline-block;
+      margin-top: 12px;
+      padding: 10px 18px;
+      border-radius: 999px;
+      border: 1px solid #0ff;
+      color: #0ff;
+      text-decoration: none;
+      font-size: 0.78em;
+    }
+
+    ul {
+      list-style: none;
+      display: grid;
+      gap: 10px;
+    }
+
+    @media (max-width: 700px) {
+      nav { gap: 12px; flex-wrap: wrap; }
+      .page { width: min(100% - 20px, 1100px); padding-top: 30px; }
+      .panel { padding: 20px; }
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="index.html">HOME</a>
+    <a href="room.html" class="active">THE ROOM</a>
+    <a href="producer_styles.html">PRODUCER STYLES</a>
+    <a href="contact.html">CONTACT</a>
+  </nav>
+
+  <main class="page">
+    <header>
+      <h1>FAVOURITE ARTISTS</h1>
+      <p>A page for influences, obsessions, references, and all-time picks</p>
+    </header>
+
+    <section class="panel">
+      <h2>// DISCUSSION TOPIC</h2>
+      <p>
+        This space is for artist-driven conversations. Users can share who shaped their taste,
+        which tracks changed their direction, and how specific artists influence sound design,
+        songwriting, visuals, stage identity, or production decisions.
+      </p>
+      <a class="cta" href="room.html">BACK TO THE ROOM</a>
+    </section>
+
+    <section class="panel">
+      <h2>// WAYS TO USE THIS PAGE</h2>
+      <div class="grid">
+        <article class="card">
+          <h3>ALL-TIME FAVORITES</h3>
+          <p>The artists you always come back to no matter what phase you are in.</p>
+        </article>
+        <article class="card">
+          <h3>CURRENT OBSESSIONS</h3>
+          <p>Who you are looping right now, and what keeps pulling you back in.</p>
+        </article>
+        <article class="card">
+          <h3>UNDERGROUND PICKS</h3>
+          <p>Names more people should know before the algorithm ruins the secret.</p>
+        </article>
+        <article class="card">
+          <h3>INFLUENCE MAP</h3>
+          <p>Artists who shaped your own workflow, aesthetic, or sonic direction.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>// GOOD STARTER QUESTIONS</h2>
+      <ul>
+        <li>Which artist changed your taste the fastest?</li>
+        <li>Who has the strongest identity across both music and visuals?</li>
+        <li>Which artist do you respect more as a producer than as a performer?</li>
+        <li>Which artist has the most replay value for you and why?</li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>

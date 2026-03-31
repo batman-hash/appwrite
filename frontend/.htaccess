@@ -1,0 +1,19 @@
+# Aruba .htaccess configuration for Flask app
+# Place this file in the root of your Aruba hosting
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    
+    # Redirect all API requests to Python app
+    RewriteRule ^api/(.*)$ /auth_server.py/api/$1 [L]
+    
+    # Serve static files
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^(.*)$ /index.html [L]
+</IfModule>
+
+# Python CGI configuration
+Options +ExecCGI
+AddHandler cgi-script .py
+DirectoryIndex auth_server.py

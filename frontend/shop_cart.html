@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CYBERGHOST - SHOP CART</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      font-family: 'Orbitron', sans-serif;
+      background: #000;
+      color: #e6e6e6;
+      min-height: 100vh;
+    }
+
+    nav {
+      position: fixed;
+      top: 0;
+      width: 100%;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      gap: 30px;
+      background: rgba(0, 0, 0, 0.8);
+      border-bottom: 1px solid rgba(0, 255, 255, 0.25);
+      z-index: 1000;
+    }
+
+    nav a {
+      color: #0ff;
+      text-decoration: none;
+      letter-spacing: 2px;
+      font-size: 0.86em;
+    }
+
+    nav a.active {
+      color: #f0f;
+      text-shadow: 0 0 10px rgba(255, 0, 255, 0.5);
+    }
+
+    .top-cart-count {
+      position: absolute;
+      right: 22px;
+      top: 14px;
+      border: 1px solid rgba(0, 255, 255, 0.4);
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 0.7em;
+      color: #0ff;
+      background: rgba(0, 0, 0, 0.7);
+    }
+
+    header {
+      text-align: center;
+      padding: 132px 20px 24px;
+    }
+
+    h1 {
+      font-size: 2.2em;
+      background: linear-gradient(135deg, #f0f 0%, #0ff 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    header p {
+      margin-top: 10px;
+      color: #888;
+      letter-spacing: 2px;
+      font-size: 0.84em;
+      text-transform: uppercase;
+    }
+
+    .main {
+      width: min(1100px, 92%);
+      margin: 0 auto 50px;
+      display: grid;
+      grid-template-columns: 1.5fr 1fr;
+      gap: 18px;
+    }
+
+    .panel {
+      background: linear-gradient(180deg, rgba(18, 18, 30, 0.92) 0%, rgba(8, 8, 16, 0.98) 100%);
+      border: 1px solid rgba(0, 255, 255, 0.22);
+      border-radius: 14px;
+      padding: 22px;
+    }
+
+    .panel h2 {
+      color: #0ff;
+      font-size: 1em;
+      letter-spacing: 2px;
+      margin-bottom: 14px;
+    }
+
+    .cart-item {
+      border: 1px solid rgba(255, 0, 255, 0.25);
+      border-radius: 10px;
+      padding: 14px;
+      margin-bottom: 12px;
+      background: rgba(0, 0, 0, 0.4);
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .item-title { color: #fff; font-size: 0.9em; }
+    .item-price { color: #ffd700; font-size: 0.78em; }
+
+    .qty-box {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .qty-btn, .remove-btn, .checkout-btn, .clear-btn {
+      border: 1px solid rgba(0, 255, 255, 0.4);
+      background: transparent;
+      color: #0ff;
+      border-radius: 8px;
+      padding: 6px 10px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 0.75em;
+    }
+
+    .remove-btn {
+      border-color: rgba(255, 0, 255, 0.45);
+      color: #f0f;
+    }
+
+    .checkout-btn {
+      width: 100%;
+      margin-top: 14px;
+      padding: 12px;
+      border-radius: 10px;
+      font-size: 0.84em;
+      letter-spacing: 1px;
+    }
+
+    .clear-btn {
+      width: 100%;
+      margin-top: 10px;
+      border-color: rgba(255, 0, 255, 0.45);
+      color: #f0f;
+    }
+
+    .total {
+      margin-top: 10px;
+      border-top: 1px solid rgba(0, 255, 255, 0.2);
+      padding-top: 10px;
+      font-size: 0.95em;
+      color: #fff;
+    }
+
+    .payment-list {
+      margin-top: 14px;
+      list-style: none;
+      display: grid;
+      gap: 10px;
+    }
+
+    .payment-list li {
+      border: 1px solid rgba(0, 255, 255, 0.2);
+      border-radius: 10px;
+      padding: 10px 12px;
+      color: #a7e9ee;
+      font-size: 0.82em;
+      background: rgba(0, 0, 0, 0.35);
+    }
+
+    .payment-options {
+      margin-top: 14px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .payment-option {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 10px;
+      align-items: start;
+      border: 1px solid rgba(0, 255, 255, 0.22);
+      border-radius: 10px;
+      padding: 12px;
+      background: rgba(0, 0, 0, 0.35);
+    }
+
+    .payment-option input[type="radio"] {
+      margin-top: 3px;
+      accent-color: #0ff;
+    }
+
+    .payment-option strong {
+      color: #fff;
+      font-size: 0.84em;
+      letter-spacing: 1px;
+    }
+
+    .payment-option span {
+      display: block;
+      margin-top: 4px;
+      color: #9ddde3;
+      font-size: 0.75em;
+      line-height: 1.5;
+    }
+
+    .checkout-note {
+      margin-top: 12px;
+      color: #9baeb3;
+      font-size: 0.74em;
+      line-height: 1.45;
+    }
+
+    .empty {
+      color: #888;
+      font-size: 0.84em;
+      text-align: center;
+      padding: 18px;
+      border: 1px dashed rgba(0, 255, 255, 0.2);
+      border-radius: 10px;
+      background: rgba(0, 0, 0, 0.3);
+    }
+
+    @media (max-width: 860px) {
+      .main { grid-template-columns: 1fr; }
+      nav { flex-wrap: wrap; gap: 12px; }
+      .top-cart-count { position: static; margin-left: 8px; }
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="index.html">HOME</a>
+    <a href="Posterwall.html">POSTERWALL</a>
+    <a href="shop.html" class="active">SHOP</a>
+    <a href="room.html">THE ROOM</a>
+    <a href="contact.html">CONTACT</a>
+    <a href="cash_till.html">CASH TILL</a>
+    <span class="top-cart-count" id="topCartCount">CART (0)</span>
+  </nav>
+
+  <header>
+    <h1>SHOP CART CHECKOUT</h1>
+    <p>Review your plugins and complete payment</p>
+  </header>
+
+  <main class="main">
+    <section class="panel">
+      <h2>// CART ITEMS</h2>
+      <div id="cartItems"></div>
+    </section>
+
+    <aside class="panel">
+      <h2>// CHECKOUT</h2>
+      <div id="summary"></div>
+      <div class="payment-options" id="paymentOptions">
+        <label class="payment-option">
+          <input type="radio" name="paymentMethod" value="paypal.html">
+          <div>
+            <strong>PAYPAL</strong>
+            <span>Open PayPal payment page with login access and verification check.</span>
+          </div>
+        </label>
+        <label class="payment-option">
+          <input type="radio" name="paymentMethod" value="debit_card.html" checked>
+          <div>
+            <strong>DEBIT CARD</strong>
+            <span>Pay with card number, expiry, CVV, and security verification.</span>
+          </div>
+        </label>
+        <label class="payment-option">
+          <input type="radio" name="paymentMethod" value="bitcoin.html">
+          <div>
+            <strong>BITCOIN</strong>
+            <span>Open the crypto payment page with wallet reference and verification step.</span>
+          </div>
+        </label>
+      </div>
+      <button class="checkout-btn" id="checkoutBtn">PROCEED TO PAYMENT</button>
+      <button class="clear-btn" id="clearBtn">CLEAR CART</button>
+      <p class="checkout-note">Before completing a payment, the next page will ask for email or phone verification and a local anti-bot confirmation.</p>
+
+      <h2 style="margin-top:18px;">// PAYMENTS ACCEPTED</h2>
+      <ul class="payment-list">
+        <li>PayPal accepted</li>
+        <li>Debit Card payment accepted</li>
+        <li>Bitcoin accepted</li>
+      </ul>
+    </aside>
+  </main>
+
+  <script>
+    const CART_KEY = "cyberghost_shop_cart_v1";
+    const CHECKOUT_KEY = "cyberghost_checkout_cart_v1";
+    const CHECKOUT_ORDER_KEY = "cyberghost_checkout_order_v1";
+    const API_BASE = `${window.location.origin}/api`;
+    const cartItemsEl = document.getElementById("cartItems");
+    const summaryEl = document.getElementById("summary");
+    const topCartCount = document.getElementById("topCartCount");
+    const checkoutBtn = document.getElementById("checkoutBtn");
+    const clearBtn = document.getElementById("clearBtn");
+    const paymentOptionsEl = document.getElementById("paymentOptions");
+    const checkoutNote = document.querySelector(".checkout-note");
+    let currentOrderPaid = false;
+
+    function getCart() {
+      try {
+        return JSON.parse(localStorage.getItem(CART_KEY) || "[]");
+      } catch (_) {
+        return [];
+      }
+    }
+
+    function saveCart(cart) {
+      localStorage.setItem(CART_KEY, JSON.stringify(cart));
+    }
+
+    function getCheckoutOrder() {
+      try {
+        return JSON.parse(localStorage.getItem(CHECKOUT_ORDER_KEY) || "null");
+      } catch (_) {
+        return null;
+      }
+    }
+
+    function money(n) {
+      return "$" + Number(n || 0).toFixed(2);
+    }
+
+    function renderCart() {
+      const cart = getCart();
+      const totalQty = cart.reduce((a, i) => a + Number(i.qty || 0), 0);
+      const totalPrice = cart.reduce((a, i) => a + Number(i.price || 0) * Number(i.qty || 0), 0);
+      topCartCount.textContent = `CART (${totalQty})`;
+
+      if (!cart.length) {
+        cartItemsEl.innerHTML = '<div class="empty">Your cart is empty. Go back to SHOP and add a plugin.</div>';
+      } else {
+        cartItemsEl.innerHTML = cart.map((item, idx) => `
+          <div class="cart-item">
+            <div>
+              <div class="item-title">${item.name}</div>
+              <div class="item-price">${money(item.price)} each</div>
+            </div>
+            <div class="qty-box">
+              <button class="qty-btn" data-act="dec" data-idx="${idx}">-</button>
+              <span>${item.qty}</span>
+              <button class="qty-btn" data-act="inc" data-idx="${idx}">+</button>
+            </div>
+            <button class="remove-btn" data-act="rm" data-idx="${idx}">REMOVE</button>
+          </div>
+        `).join("");
+      }
+
+      summaryEl.innerHTML = `
+        <div class="total">Items: ${totalQty}</div>
+        <div class="total">Total: ${money(totalPrice)}</div>
+      `;
+
+      const checkoutEnabled = cart.length && !currentOrderPaid;
+      checkoutBtn.disabled = !checkoutEnabled;
+      checkoutBtn.style.opacity = checkoutEnabled ? "1" : "0.5";
+      checkoutBtn.style.cursor = checkoutEnabled ? "pointer" : "not-allowed";
+      updateCheckoutButtonLabel();
+    }
+
+    function updateCheckoutButtonLabel() {
+      if (currentOrderPaid) {
+        checkoutBtn.textContent = "NOTHING TO PAY";
+        return;
+      }
+      const selected = paymentOptionsEl.querySelector('input[name="paymentMethod"]:checked');
+      const nextPage = selected ? selected.value : "paypal.html";
+      const labels = {
+        "paypal.html": "PROCEED WITH PAYPAL",
+        "debit_card.html": "PROCEED WITH DEBIT CARD",
+        "bitcoin.html": "PROCEED WITH BITCOIN"
+      };
+      checkoutBtn.textContent = labels[nextPage] || "PROCEED TO PAYMENT";
+    }
+
+    async function syncExistingOrderStatus() {
+      const order = getCheckoutOrder();
+      const orderCode = String((order && order.order_code) || "").trim();
+      currentOrderPaid = false;
+
+      if (!orderCode) {
+        if (checkoutNote) {
+          checkoutNote.textContent = "Before completing a payment, the next page will ask for email or phone verification and a local anti-bot confirmation.";
+        }
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}/orders/${encodeURIComponent(orderCode)}`);
+        const data = await res.json();
+        if (res.ok && data.success && String(data.order.status || "").toLowerCase() === "paid") {
+          currentOrderPaid = true;
+          if (checkoutNote) {
+            checkoutNote.textContent = `Order ${orderCode} is already paid. Nothing to pay.`;
+          }
+        } else if (checkoutNote) {
+          checkoutNote.textContent = "Before completing a payment, the next page will ask for email or phone verification and a local anti-bot confirmation.";
+        }
+      } catch (_) {
+        if (checkoutNote) {
+          checkoutNote.textContent = "Before completing a payment, the next page will ask for email or phone verification and a local anti-bot confirmation.";
+        }
+      }
+    }
+
+    cartItemsEl.addEventListener("click", (e) => {
+      const btn = e.target.closest("button[data-act]");
+      if (!btn) return;
+      const idx = Number(btn.dataset.idx);
+      const act = btn.dataset.act;
+      const cart = getCart();
+      if (!cart[idx]) return;
+
+      if (act === "inc") cart[idx].qty += 1;
+      if (act === "dec") cart[idx].qty = Math.max(1, cart[idx].qty - 1);
+      if (act === "rm") cart.splice(idx, 1);
+
+      saveCart(cart);
+      renderCart();
+    });
+
+    clearBtn.addEventListener("click", () => {
+      saveCart([]);
+      renderCart();
+    });
+
+    paymentOptionsEl.addEventListener("change", () => {
+      updateCheckoutButtonLabel();
+    });
+
+    checkoutBtn.addEventListener("click", async () => {
+      const cart = getCart();
+      if (!cart.length || currentOrderPaid) return;
+      const selected = paymentOptionsEl.querySelector('input[name="paymentMethod"]:checked');
+      const nextPage = selected ? selected.value : "paypal.html";
+      const providerMap = {
+        "paypal.html": "paypal",
+        "debit_card.html": "card",
+        "bitcoin.html": "bitcoin"
+      };
+      const provider = providerMap[nextPage] || "paypal";
+
+      checkoutBtn.disabled = true;
+      checkoutBtn.textContent = "CREATING ORDER...";
+
+      try {
+        const orderRes = await fetch(`${API_BASE}/orders`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            items: cart,
+            source: "shop_cart"
+          })
+        });
+        const orderData = await orderRes.json();
+        if (!orderRes.ok || !orderData.success) {
+          throw new Error(orderData.error || "Order creation failed");
+        }
+
+        const orderCode = orderData.order.order_code;
+        localStorage.setItem(CHECKOUT_KEY, JSON.stringify(cart));
+        localStorage.setItem(CHECKOUT_ORDER_KEY, JSON.stringify(orderData.order));
+
+        const payRes = await fetch(`${API_BASE}/payments/${provider}/create`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ order_code: orderCode })
+        });
+        const payData = await payRes.json();
+        if (!payRes.ok || !payData.success) {
+          throw new Error(payData.error || "Payment session creation failed");
+        }
+
+        const url = new URL(payData.payment.checkout_url, window.location.origin);
+        url.searchParams.set("order", orderCode);
+        url.searchParams.set("payment_id", payData.payment.provider_payment_id);
+        window.location.href = url.toString();
+      } catch (err) {
+        alert(err.message || "Checkout failed");
+      } finally {
+        checkoutBtn.disabled = false;
+        updateCheckoutButtonLabel();
+      }
+    });
+
+    (async () => {
+      await syncExistingOrderStatus();
+      renderCart();
+    })();
+  </script>
+</body>
+</html>

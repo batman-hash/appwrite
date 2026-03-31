@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Root Chat</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #0f1115; color: #e8edf2; margin: 0; }
+    .wrap { max-width: 760px; margin: 24px auto; padding: 16px; }
+    .card { background: #171b22; border: 1px solid #2a313d; border-radius: 10px; padding: 14px; margin-bottom: 12px; }
+    h1 { font-size: 20px; margin: 0 0 8px; }
+    .muted { color: #9aa6b2; font-size: 13px; }
+    .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    input, button { border-radius: 8px; border: 1px solid #2a313d; padding: 10px; }
+    input { background: #0f141a; color: #e8edf2; flex: 1; min-width: 170px; }
+    button { background: #3d8bfd; color: #fff; cursor: pointer; }
+    button.alt { background: #334155; }
+    #chatMessages { height: 340px; overflow-y: auto; background: #0e1319; border-radius: 8px; padding: 10px; }
+    .msg { margin: 6px 0; }
+    .u { color: #7dd3fc; font-weight: 700; margin-right: 6px; }
+    #chatInput { width: calc(100% - 110px); }
+    #status { margin-top: 8px; font-size: 13px; color: #9aa6b2; }
+    #online { font-weight: 700; color: #34d399; }
+  
+  /* === RESPONSIVE PATCH === */
+  img, video, canvas {
+    max-width: 100%;
+    height: auto;
+  }
+
+  nav {
+    flex-wrap: wrap;
+  }
+
+  @media (max-width: 1024px) {
+    nav {
+      gap: 14px !important;
+      padding: 14px !important;
+    }
+
+    header {
+      padding-left: 16px !important;
+      padding-right: 16px !important;
+    }
+
+    .wrap,
+    .container,
+    .contact-container,
+    .poster-grid-container,
+    .chat-section,
+    .auth-window,
+    .player,
+    .panel {
+      width: min(100%, 980px) !important;
+      margin-left: auto !important;
+      margin-right: auto !important;
+    }
+  }
+
+  @media (max-width: 768px) {
+    html, body {
+      font-size: 15px;
+    }
+
+    nav {
+      justify-content: center !important;
+      row-gap: 10px !important;
+      column-gap: 10px !important;
+      padding: 10px 8px !important;
+    }
+
+    nav a,
+    nav button {
+      font-size: 0.78rem !important;
+      padding: 8px 10px !important;
+    }
+
+    header {
+      margin-top: 82px !important;
+      padding: 0 12px !important;
+      text-align: center !important;
+    }
+
+    h1 {
+      font-size: clamp(1.3rem, 6vw, 2rem) !important;
+      line-height: 1.2;
+    }
+
+    h2 {
+      font-size: clamp(1rem, 5vw, 1.5rem) !important;
+    }
+
+    .auth-window,
+    .contact-form-wrapper,
+    .chat-section,
+    .card,
+    .player,
+    .panel {
+      width: calc(100% - 20px) !important;
+      max-width: 100% !important;
+      margin-left: auto !important;
+      margin-right: auto !important;
+      padding: 12px !important;
+    }
+
+    .poster-grid,
+    .events-grid,
+    .cards-grid,
+    .topics-grid,
+    .playlist-grid,
+    .shop-grid,
+    .panel {
+      grid-template-columns: 1fr !important;
+      gap: 12px !important;
+    }
+
+    .chat-messages {
+      height: 46vh !important;
+      min-height: 260px;
+      max-height: 58vh;
+    }
+
+    .chat-input-area,
+    .row {
+      flex-wrap: wrap !important;
+    }
+
+    .chat-input-area input,
+    .chat-input-area button,
+    input,
+    select,
+    textarea,
+    button {
+      width: 100%;
+      max-width: 100%;
+    }
+  }
+
+  @media (max-width: 420px) {
+    html, body {
+      font-size: 14px;
+    }
+
+    nav a,
+    nav button {
+      font-size: 0.72rem !important;
+      letter-spacing: 0.04em !important;
+    }
+
+    .chat-messages {
+      height: 44vh !important;
+    }
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>Root Chat</h1>
+      <div class="muted">Login with username/password to access chat. Online: <span id="online">0</span></div>
+    </div>
+
+    <div class="card" id="authCard">
+      <div class="row">
+        <input type="text" id="username" placeholder="Username">
+        <input type="password" id="password" placeholder="Password">
+        <button id="loginBtn">Access Chat</button>
+      </div>
+      <div id="status">Not authenticated.</div>
+    </div>
+
+    <div class="card" id="chatCard" style="display:none;">
+      <div id="chatMessages"></div>
+      <div class="row" style="margin-top:10px;">
+        <input type="text" id="chatInput" placeholder="Write message...">
+        <button id="sendBtn">Send</button>
+        <button class="alt" id="logoutBtn">Logout</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API = "http://127.0.0.1:8011/api";
+    const statusEl = document.getElementById("status");
+    const onlineEl = document.getElementById("online");
+    const chatCard = document.getElementById("chatCard");
+    const authCard = document.getElementById("authCard");
+    const chatMessages = document.getElementById("chatMessages");
+    const chatInput = document.getElementById("chatInput");
+    let lastId = 0;
+    let pollTimer = null;
+
+    function setStatus(txt, bad) {
+      statusEl.textContent = txt;
+      statusEl.style.color = bad ? "#f87171" : "#9aa6b2";
+    }
+
+    async function refreshOnline() {
+      try {
+        const res = await fetch(`${API}/chat/online`, { credentials: "include" });
+        const data = await res.json();
+        if (data && data.success) onlineEl.textContent = String(data.online || 0);
+      } catch (_) {}
+    }
+
+    function addMsg(m) {
+      const div = document.createElement("div");
+      div.className = "msg";
+      div.innerHTML = `<span class="u">${m.username}:</span>${m.message}`;
+      chatMessages.appendChild(div);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    async function fetchMessages() {
+      try {
+        const res = await fetch(`${API}/chat/messages?since_id=${lastId}`, { credentials: "include" });
+        const data = await res.json();
+        if (!data.success) return;
+        (data.messages || []).forEach(m => {
+          addMsg(m);
+          lastId = Math.max(lastId, m.id || 0);
+        });
+      } catch (_) {}
+    }
+
+    function startPolling() {
+      if (pollTimer) clearInterval(pollTimer);
+      pollTimer = setInterval(async () => {
+        await fetchMessages();
+        await refreshOnline();
+      }, 1500);
+    }
+
+    async function loginChat() {
+      const username = document.getElementById("username").value.trim();
+      const password = document.getElementById("password").value;
+      if (!username || !password) {
+        setStatus("Username and password required.", true);
+        return;
+      }
+      try {
+        const res = await fetch(`${API}/chat-login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ username, password })
+        });
+        const data = await res.json();
+        if (!data.success) {
+          setStatus(data.error || "Login failed.", true);
+          return;
+        }
+        setStatus(`Connected as ${data.user.username}.`);
+        authCard.style.display = "none";
+        chatCard.style.display = "block";
+        await refreshOnline();
+        await fetchMessages();
+        startPolling();
+      } catch (_) {
+        setStatus("Chat login request failed.", true);
+      }
+    }
+
+    async function sendMessage() {
+      const message = chatInput.value.trim();
+      if (!message) return;
+      chatInput.value = "";
+      try {
+        const res = await fetch(`${API}/chat/messages`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ message })
+        });
+        const data = await res.json();
+        if (!data.success) {
+          setStatus(data.error || "Message failed.", true);
+          return;
+        }
+        await fetchMessages();
+      } catch (_) {
+        setStatus("Send message failed.", true);
+      }
+    }
+
+    async function logout() {
+      try { await fetch("/logout", { credentials: "include" }); } catch (_) {}
+      if (pollTimer) clearInterval(pollTimer);
+      chatCard.style.display = "none";
+      authCard.style.display = "block";
+      chatMessages.innerHTML = "";
+      lastId = 0;
+      setStatus("Logged out.");
+      await refreshOnline();
+    }
+
+    document.getElementById("loginBtn").addEventListener("click", loginChat);
+    document.getElementById("sendBtn").addEventListener("click", sendMessage);
+    document.getElementById("logoutBtn").addEventListener("click", logout);
+    chatInput.addEventListener("keydown", (e) => { if (e.key === "Enter") sendMessage(); });
+
+    refreshOnline();
+  </script>
+</body>
+</html>
+

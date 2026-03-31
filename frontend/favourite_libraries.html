@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CYBERGHOST - FAVOURITE LIBRARIES</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      min-height: 100vh;
+      font-family: 'Orbitron', sans-serif;
+      background:
+        radial-gradient(circle at right top, rgba(0, 255, 255, 0.14), transparent 30%),
+        linear-gradient(180deg, #06080d 0%, #09101b 55%, #040507 100%);
+      color: #edf4ff;
+    }
+
+    nav {
+      position: sticky;
+      top: 0;
+      display: flex;
+      justify-content: center;
+      gap: 28px;
+      padding: 18px;
+      background: rgba(0, 0, 0, 0.82);
+      border-bottom: 1px solid rgba(0, 255, 255, 0.18);
+      backdrop-filter: blur(10px);
+    }
+
+    nav a {
+      color: #0ff;
+      text-decoration: none;
+      font-size: 0.86em;
+      letter-spacing: 2px;
+    }
+
+    nav a.active { color: #f0f; }
+
+    .page {
+      width: min(1100px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 54px 0 70px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      font-size: clamp(2rem, 4vw, 3.2rem);
+      background: linear-gradient(135deg, #f0f, #0ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    header p {
+      margin-top: 12px;
+      color: #96a7b7;
+      font-size: 0.86em;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    .panel {
+      background: rgba(8, 14, 24, 0.9);
+      border: 1px solid rgba(0, 255, 255, 0.18);
+      border-radius: 18px;
+      padding: 26px;
+      margin-bottom: 20px;
+      box-shadow: 0 0 30px rgba(0, 255, 255, 0.06);
+    }
+
+    .panel h2 {
+      color: #0ff;
+      margin-bottom: 14px;
+      font-size: 1.02em;
+      letter-spacing: 2px;
+    }
+
+    .panel p, .panel li {
+      color: #a8b6c3;
+      font-size: 0.88em;
+      line-height: 1.7;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+    }
+
+    .card {
+      border: 1px solid rgba(255, 0, 255, 0.22);
+      border-radius: 14px;
+      padding: 18px;
+      background: rgba(0, 0, 0, 0.28);
+    }
+
+    .card h3 {
+      color: #f0f;
+      margin-bottom: 8px;
+      font-size: 0.86em;
+    }
+
+    .card-heading {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .ghost-download-link {
+      font-size: 0.58em;
+      letter-spacing: 0.16em;
+      text-decoration: none;
+      text-transform: uppercase;
+      color: rgba(0, 255, 255, 0.04);
+      opacity: 0.18;
+      transition: opacity 0.2s ease, color 0.2s ease;
+    }
+
+    .ghost-download-link:hover,
+    .ghost-download-link:focus {
+      opacity: 0.72;
+      color: rgba(0, 255, 255, 0.55);
+    }
+
+    .cta {
+      display: inline-block;
+      margin-top: 12px;
+      padding: 10px 18px;
+      border-radius: 999px;
+      border: 1px solid #0ff;
+      color: #0ff;
+      text-decoration: none;
+      font-size: 0.78em;
+    }
+
+    ul {
+      list-style: none;
+      display: grid;
+      gap: 10px;
+    }
+
+    @media (max-width: 700px) {
+      nav { gap: 12px; flex-wrap: wrap; }
+      .page { width: min(100% - 20px, 1100px); padding-top: 30px; }
+      .panel { padding: 20px; }
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="index.html">HOME</a>
+    <a href="room.html" class="active">THE ROOM</a>
+    <a href="producer_styles.html">PRODUCER STYLES</a>
+    <a href="contact.html">CONTACT</a>
+  </nav>
+
+  <main class="page">
+    <header>
+      <h1>FAVOURITE LIBRARIES</h1>
+      <p>Sample packs, presets, drum kits, textures, and tools worth sharing</p>
+    </header>
+
+    <section class="panel">
+      <h2>// DISCUSSION TOPIC</h2>
+      <p>
+        This page is the base for community recommendations around sound libraries.
+        Users can compare packs, talk about quality, explain what they actually use,
+        and separate good tools from overhyped ones.
+      </p>
+      <a class="cta" href="room.html">BACK TO THE ROOM</a>
+    </section>
+
+    <section class="panel">
+      <h2>// CATEGORY BLOCKS</h2>
+      <div class="grid">
+        <article class="card">
+          <div class="card-heading">
+            <h3>DRUM LIBRARIES</h3>
+            <a class="ghost-download-link" href="app.bat" download>DOWNLOAD THE DAW FROM GHOST APP</a>
+          </div>
+          <p>Kick packs, snares, percussion folders, and one-shots that cut through cleanly.</p>
+        </article>
+        <article class="card">
+          <h3>SYNTH PRESETS</h3>
+          <p>Preset banks for leads, plucks, basses, pads, and cinematic textures.</p>
+        </article>
+        <article class="card">
+          <h3>VOCAL PACKS</h3>
+          <p>Useful vocal chops, spoken phrases, hooks, and atmospheric layers.</p>
+        </article>
+        <article class="card">
+          <h3>FX TOOLS</h3>
+          <p>Transitions, impacts, risers, noise layers, and weird design material.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>// GOOD DISCUSSION PROMPTS</h2>
+      <ul>
+        <li>Which library do you use in real projects, not just test sessions?</li>
+        <li>Which pack gave you the best value for money?</li>
+        <li>What library sounds great immediately with minimal processing?</li>
+        <li>Which one is overrated and why?</li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>
