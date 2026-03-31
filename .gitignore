@@ -32,6 +32,16 @@ dist/
 # Node
 node_modules/
 
+# Kernel module build outputs
+*.ko
+*.mod
+*.mod.c
+*.o
+*.cmd
+*.symvers
+Module.symvers
+modules.order
+
 # OS
 .DS_Store
 Thumbs.db
