@@ -1,4 +1,4 @@
-﻿# The-ghost-app
+# The-ghost-app
 
 ## 🎧 Digital Music Platform
 

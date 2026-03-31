@@ -9,6 +9,7 @@ server_stdout.log
 server_stderr.log
 build
 vendor
+certs/
 *.pyc
 *.pyo
 *.pyd

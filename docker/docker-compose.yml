@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   webapp:
     build:
@@ -9,9 +11,81 @@ services:
     environment:
       - HOST=0.0.0.0
       - PORT=8011
-      - DEBUG=true
+      - DEBUG=false
+      - PYTHONUNBUFFERED=1
+      - FLASK_ENV=production
     ports:
       - "8011:8011"
     volumes:
-      - ../user.db:/app/user.db
-      - ../frontend1:/app/frontend
+      - ../frontend:/app/frontend
+      - ../certs:/app/certs:ro
+      - ./data:/app/data
+      - ./logs:/app/logs
+    networks:
+      - cyberghost-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fk https://localhost:8011/api/health || curl -f http://localhost:8011/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  mac-rotator:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: cyberghost-mac-rotator
+    command: ["python", "mac_rotation.py", "--interval", "60"]
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - cyberghost-network
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    privileged: true
+
+  ip-rotator:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: cyberghost-ip-rotator
+    command: ["python", "ip_rotation.py", "--interval", "60", "--subnet", "192.168.1.0/24"]
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - cyberghost-network
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    privileged: true
+
+  firewall:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: cyberghost-firewall
+    command: ["python", "firewall_setup.py", "--apply", "--allow-web"]
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - cyberghost-network
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    privileged: true
+
+networks:
+  cyberghost-network:
+    driver: bridge
+
+volumes:
+  data:
+  logs:

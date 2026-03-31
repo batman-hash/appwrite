@@ -11,6 +11,14 @@ if exist "myenv\Scripts\activate.bat" (
     call "myenv\Scripts\activate.bat"
 )
 
+rem Load environment variables from .env so the launcher picks up SECRET_KEY and
+rem other app settings without hard-coding them in this script.
+if exist ".env" (
+    for /f "usebackq tokens=1* delims==" %%A in (`python -c "from pathlib import Path; p = Path('.env'); [print(line.strip()) for line in p.read_text().splitlines() if line.strip() and not line.lstrip().startswith('#') and '=' in line]"`) do (
+        set "%%A=%%B"
+    )
+)
+
 set HOST=127.0.0.1
 set PORT=8011
 set BASE_URL=http://127.0.0.1:8011
