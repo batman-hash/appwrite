@@ -361,10 +361,16 @@ def handle_unexpected_exception(error):
 # SERVE WEBSITE FILES
 # =========================
 
+def _preferred_frontend_entry():
+    for candidate in ("react_app.html", "root.html", "index.html"):
+        if os.path.exists(os.path.join(FRONTEND_DIR, candidate)):
+            return candidate
+    return "index.html"
+
+
 @app.route("/")
 def site():
-    target = "root.html" if os.path.exists(os.path.join(FRONTEND_DIR, "root.html")) else "index.html"
-    return send_from_directory(FRONTEND_DIR, target)
+    return send_from_directory(FRONTEND_DIR, _preferred_frontend_entry())
 
 @app.route("/webapp.py")
 @app.route("/webapp.py/")
@@ -377,6 +383,8 @@ def webapp_alias():
 def files(filename):
     if filename in ("webapp.py", "backend/webapp.py"):
         return redirect("/")
+    if filename.endswith(".html") and os.path.exists(os.path.join(FRONTEND_DIR, "react_app.html")):
+        return send_from_directory(FRONTEND_DIR, "react_app.html")
     return send_from_directory(FRONTEND_DIR, filename)
 
 # =========================
