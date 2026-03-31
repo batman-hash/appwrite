@@ -31,11 +31,13 @@ That uses the installed kernel headers for the running kernel:
 ## Load and unload
 
 ```bash
-sudo insmod linux_kernel_bridge.ko allowed_uid=$(id -u)
+./load_current_user.sh
 sudo rmmod linux_kernel_bridge
 ```
 
-If you want to hard-code a different user, pass that numeric UID instead of `$(id -u)`.
+If you want to hard-code a different user, pass that numeric UID with `sudo insmod linux_kernel_bridge.ko allowed_uid=<uid>`.
+The helper script uses `SUDO_USER` when available so `sudo` does not accidentally
+turn the current user into `root`; otherwise it falls back to `whoami`.
 The device node is created with open filesystem permissions, but the module itself
 rejects any `open`, `read`, `write`, `llseek`, or `ioctl` call from a different UID.
 
