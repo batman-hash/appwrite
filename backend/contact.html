@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CYBERGHOST — Contact</title>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@600&display=swap');
+
+*{margin:0;padding:0;box-sizing:border-box}
+
+/* ================= NAV ================= */
+
+nav{
+  position:fixed;
+  top:0;
+  width:100%;
+  padding:14px;
+  display:flex;
+  justify-content:center;
+  background:rgba(0,0,0,.7);
+  box-shadow:0 0 20px #00ffff80;
+  backdrop-filter:blur(8px);
+  z-index:1000;
+}
+
+nav a{
+  color:#0ff;
+  text-decoration:none;
+  text-shadow:0 0 8px #f0f;
+  font-size:.85em;
+}
+
+/* ================= PAGE ================= */
+
+body{
+  font-family:'Orbitron',sans-serif;
+  background:radial-gradient(circle at center,#05000a,#000);
+  color:#e6e6e6;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  min-height:100vh;
+  padding-top:70px; /* space for nav */
+}
+
+.holo-form{
+  width:100%;
+  max-width:460px;
+  padding:30px;
+  border-radius:14px;
+  background:rgba(10,10,20,.7);
+  box-shadow:0 0 40px #00ffff44;
+}
+
+.holo-form h2{
+  text-align:center;
+  margin-bottom:20px;
+  color:#0ff;
+}
+
+.holo-form input,
+.holo-form textarea{
+  width:100%;
+  margin-bottom:14px;
+  padding:12px;
+  border-radius:6px;
+  border:1px solid #0ff3;
+  background:#05080dcc;
+  color:#fff;
+}
+
+.holo-form button{
+  width:100%;
+  background:linear-gradient(90deg,#ff00ff,#00ffff);
+  color:#000;
+  border:none;
+  padding:10px;
+  border-radius:4px;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+.success{
+  display:none;
+  margin-top:12px;
+  text-align:center;
+  color:#0ff;
+}
+</style>
+</head>
+
+<body>
+
+<nav>
+  <a href="index.html">◀ Home</a>
+</nav>
+
+<form class="holo-form" id="contactForm">
+  <h2>Transmit Signal</h2>
+  <input placeholder="Your Name" required>
+  <input type="email" placeholder="Your Email" required>
+  <textarea placeholder="Message" required></textarea>
+  <button>Send Transmission</button>
+  <div class="success">Signal received.</div>
+</form>
+
+<script>
+document.getElementById('contactForm').onsubmit = e => {
+  e.preventDefault();
+  e.target.reset();
+  e.target.querySelector('.success').style.display = 'block';
+};
+</script>
+
+</body>
+</html>
