@@ -1,62 +1,10 @@
 {
-  "name": "devnavigator",
+  "name": "render-root-shim",
+  "private": true,
   "version": "1.0.0",
-  "description": "Automated email campaign platform for educational initiatives",
-  "main": "index.js",
   "scripts": {
-    "start": "node index.js",
-    "dev": "nodemon index.js",
-    "one-go": "bash scripts/search/one-go.sh",
-    "db:init": "python3 python_engine/database_manager.py",
-    "db:templates": "python3 python_engine/template_manager.py",
-    "build:cpp": "cd cpp_crawler && mkdir -p build && cd build && cmake .. && make",
-    "send:emails": "cd cpp_crawler/build && ./devnavigator",
-    "send:status": "python3 devnavigator.py send-status",
-    "extract:emails": "python3 devnavigator.py extract-emails",
-    "contacts:export": "python3 devnavigator.py export-contacts",
-    "contacts:queue": "python3 devnavigator.py queue",
-    "cache:clear": "bash scripts/search/clear-search-cache.sh",
-    "cache:clear:geo": "CLEAR_GEO_CACHE=1 bash scripts/search/clear-search-cache.sh",
-    "search:guard": "python3 search_threshold_guard.py",
-    "search:internet": "bash scripts/search/search-internet-emails.sh",
-    "crawl:emails": "bash scripts/extraction/crawl-emails.sh",
-    "crawl:emails:store": "INTERNET_SEARCH_STORE=1 INTERNET_SEARCH_DB_PATH=./database/internet_search.db bash scripts/extraction/crawl-emails.sh",
-    "crawl:emails:world": "bash scripts/search/search-internet-emails-world.sh",
-    "search:internet:real": "bash scripts/search/search-internet-emails-real.sh",
-    "search:internet:world": "bash scripts/search/search-internet-emails-world.sh",
-    "search:internet:refresh": "bash scripts/search/search-list-and-refresh-world.sh",
-    "search:list": "python3 devnavigator.py list-search-emails",
-    "search:list:emails": "python3 devnavigator.py list-search-emails --db-path ./database/internet_search.db --emails-only",
-    "search:deliver": "python3 devnavigator.py search-deliver",
-    "search:deliver:dry-run": "python3 devnavigator.py search-deliver --dry-run",
-    "search:deliver:send": "python3 devnavigator.py search-deliver --send",
-    "search:guard:warn": "python3 search_threshold_guard.py --root . --warn-only",
-    "search:internet:store": "INTERNET_SEARCH_STORE=1 INTERNET_SEARCH_DB_PATH=./database/internet_search.db bash scripts/search/search-internet-emails.sh",
-    "build:sender": "npm run build:cpp",
-    "test": "python3 -m pytest tests/",
-    "docker:build": "docker build -t devnavigator .",
-    "docker:run": "docker run --rm -it -v $(pwd):/workspace devnavigator",
-    "docker:init-db": "docker run --rm -it -v $(pwd):/workspace devnavigator init-db",
-    "docker:stats": "docker run --rm -it -v $(pwd):/workspace devnavigator stats",
-    "docker:search:internet": "bash scripts/search/docker-search-internet-emails.sh",
-    "docker:search:internet:store": "INTERNET_SEARCH_STORE=1 INTERNET_SEARCH_DB_PATH=/workspace/database/internet_search.db bash scripts/search/docker-search-internet-emails.sh"
-  },
-  "keywords": [
-    "email",
-    "campaign",
-    "education",
-    "automation"
-  ],
-  "author": "DevNavigator Team",
-  "license": "MIT",
-  "dependencies": {
-    "axios": "^1.3.0",
-    "dotenv": "^16.6.1",
-    "express": "^4.18.0",
-    "nodemailer": "^6.8.0",
-    "sqlite3": "^5.1.6"
-  },
-  "devDependencies": {
-    "nodemon": "^2.0.20"
+    "build": "python3 -m pip install --no-cache-dir Flask==3.1.3 gunicorn==23.0.0 flask-cors==6.0.2 flask-debugtoolbar==0.16.0 requests==2.31.0",
+    "postinstall": "npm run build",
+    "start": "PYTHONPATH=appwrite gunicorn backend.webapp:app --bind 0.0.0.0:${PORT:-8000} --workers 2"
   }
 }

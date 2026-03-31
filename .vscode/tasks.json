@@ -1,230 +1,26 @@
 {
-  "version": "2.0.0",
-  "inputs": [
-    {
-      "id": "crawlTitle",
-      "type": "promptString",
-      "description": "Job title",
-      "default": "frontend developer"
-    },
-    {
-      "id": "crawlKeywords",
-      "type": "promptString",
-      "description": "Keywords (comma-separated)",
-      "default": "react,javascript"
-    },
-    {
-      "id": "crawlCountry",
-      "type": "promptString",
-      "description": "Country or global alias",
-      "default": "all"
-    },
-    {
-      "id": "crawlRemote",
-      "type": "promptString",
-      "description": "Remote flag (remote, yes, or blank)",
-      "default": "remote"
-    },
-    {
-      "id": "crawlLimit",
-      "type": "promptString",
-      "description": "Preview limit",
-      "default": "10"
-    },
-    {
-      "id": "extractFile",
-      "type": "promptString",
-      "description": "Local file to extract emails from",
-      "default": "sample_emails.csv"
-    }
-  ],
-  "tasks": [
-    {
-      "label": "DevNavigator: Crawl Emails",
-      "type": "shell",
-      "command": "bash",
-      "args": [
-        "${workspaceFolder}/crawl-emails.sh",
-        "${input:crawlTitle}",
-        "${input:crawlKeywords}",
-        "${input:crawlCountry}",
-        "${input:crawlRemote}",
-        "${input:crawlLimit}"
-      ],
-      "options": {
-        "cwd": "${workspaceFolder}"
-      },
-      "presentation": {
-        "reveal": "always",
-        "panel": "dedicated",
-        "clear": true
-      },
-      "problemMatcher": []
-    },
-    {
-      "label": "DevNavigator: Crawl Emails (Store)",
-      "type": "shell",
-      "command": "bash",
-      "args": [
-        "${workspaceFolder}/search-internet-emails-real.sh",
-        "${input:crawlTitle}",
-        "${input:crawlKeywords}",
-        "${input:crawlCountry}",
-        "${input:crawlRemote}",
-        "${input:crawlLimit}"
-      ],
-      "options": {
-        "cwd": "${workspaceFolder}",
-        "env": {
-          "INTERNET_SEARCH_DB_PATH": "${workspaceFolder}/database/internet_search.db"
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Start Default Project",
+            "type": "shell",
+            "command": "npm",
+            "args": [
+                "start"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/my-express-app"
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "clear": true
+            },
+            "problemMatcher": []
         }
-      },
-      "presentation": {
-        "reveal": "always",
-        "panel": "dedicated",
-        "clear": true
-      },
-      "problemMatcher": []
-    },
-    {
-      "label": "DevNavigator: Crawl Emails (World Store)",
-      "type": "shell",
-      "command": "bash",
-      "args": [
-        "${workspaceFolder}/search-internet-emails-world.sh",
-        "${input:crawlTitle}",
-        "${input:crawlKeywords}",
-        "${input:crawlRemote}",
-        "${input:crawlLimit}"
-      ],
-      "options": {
-        "cwd": "${workspaceFolder}",
-        "env": {
-          "INTERNET_SEARCH_DB_PATH": "${workspaceFolder}/database/internet_search.db"
-        }
-      },
-      "presentation": {
-        "reveal": "always",
-        "panel": "dedicated",
-        "clear": true
-      },
-      "problemMatcher": []
-    },
-    {
-      "label": "DevNavigator: Search Deliver (Dry Run)",
-      "type": "shell",
-      "command": "bash",
-      "args": [
-        "${workspaceFolder}/search-validate-send.sh",
-        "--title",
-        "${input:crawlTitle}",
-        "--keywords",
-        "${input:crawlKeywords}",
-        "--country",
-        "${input:crawlCountry}",
-        "--remote",
-        "--template",
-        "earning_opportunity",
-        "--dry-run",
-        "--show-limit",
-        "${input:crawlLimit}"
-      ],
-      "options": {
-        "cwd": "${workspaceFolder}"
-      },
-      "presentation": {
-        "reveal": "always",
-        "panel": "dedicated",
-        "clear": true
-      },
-      "problemMatcher": []
-    },
-    {
-      "label": "DevNavigator: List Stored Search Emails",
-      "type": "shell",
-      "command": "python3",
-      "args": [
-        "devnavigator.py",
-        "list-search-emails",
-        "--db-path",
-        "./database/internet_search.db",
-        "--emails-only"
-      ],
-      "options": {
-        "cwd": "${workspaceFolder}"
-      },
-      "presentation": {
-        "reveal": "always",
-        "panel": "dedicated",
-        "clear": true
-      },
-      "problemMatcher": []
-    },
-    {
-      "label": "DevNavigator: Search Guard",
-      "type": "shell",
-      "command": "python3",
-      "args": [
-        "search_threshold_guard.py",
-        "--root",
-        "${workspaceFolder}",
-        "--warn-only"
-      ],
-      "options": {
-        "cwd": "${workspaceFolder}"
-      },
-      "presentation": {
-        "reveal": "always",
-        "panel": "dedicated",
-        "clear": true
-      },
-      "problemMatcher": []
-    },
-    {
-      "label": "DevNavigator: Extract Emails From File",
-      "type": "shell",
-      "command": "python3",
-      "args": [
-        "devnavigator.py",
-        "extract-emails",
-        "--file",
-        "${input:extractFile}",
-        "--store",
-        "--source",
-        "manual",
-        "--show-limit",
-        "${input:crawlLimit}"
-      ],
-      "options": {
-        "cwd": "${workspaceFolder}"
-      },
-      "presentation": {
-        "reveal": "always",
-        "panel": "dedicated",
-        "clear": true
-      },
-      "problemMatcher": []
-    },
-    {
-      "label": "DevNavigator: Build C++ Sender",
-      "type": "shell",
-      "command": "bash",
-      "args": [
-        "${workspaceFolder}/build.sh"
-      ],
-      "options": {
-        "cwd": "${workspaceFolder}"
-      },
-      "group": {
-        "kind": "build",
-        "isDefault": true
-      },
-      "presentation": {
-        "reveal": "always",
-        "panel": "dedicated",
-        "clear": true
-      },
-      "problemMatcher": []
-    }
-  ]
+    ]
 }

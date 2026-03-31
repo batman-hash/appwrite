@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# Virtual environments
+.venv/
+venv/
+env/
+myenv/
+
+# IDEs
+.vscode/
+.idea/
+
+# Databases, logs, env
+*.db
+*.log
+.env
+
+# Node
+node_modules/
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,10 @@
+{
+    "editor.formatOnSave": true,
+    "editor.tabSize": 4,
+    "files.trimTrailingWhitespace": true,
+    "files.insertFinalNewline": true,
+    "python.defaultInterpreterPath": "/usr/bin/python3",
+    "python.linting.enabled": true,
+    "python.linting.pylintEnabled": true,
+    "python.formatting.provider": "black"
+}

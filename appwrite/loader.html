@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Edge-Hover Image Lab</title>
+<style>
+body{
+  background:#0d1117;
+  color:#e6edf3;
+  font-family: system-ui, -apple-system, sans-serif;
+  margin:0;
+  padding:24px;
+}
+
+.lab{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap:20px;
+  max-width:1100px;
+  margin:auto;
+}
+
+/* ---- Control panel ---- */
+#injector{
+  background:#010409;
+  border:1px solid #30363d;
+  border-radius:12px;
+  padding:12px;
+}
+
+#code{
+  width:100%;
+  height:180px;
+  background:#0d1117;
+  color:#8bceff;
+  border:1px solid #30363d;
+  border-radius:8px;
+  padding:10px;
+  font-family: monospace;
+}
+
+.controls{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-top:10px;
+}
+
+input, button{
+  background:#0d1117;
+  color:#e6edf3;
+  border:1px solid #30363d;
+  border-radius:6px;
+  padding:6px 10px;
+}
+
+.slider-wrap{
+  margin-top:10px;
+}
+
+/* ---- Image hover contraption ---- */
+.stage{
+  position:relative;
+  display:inline-block;
+}
+
+.stage img{
+  display:block;
+  border-radius:16px;
+  transition: filter .15s linear;
+}
+
+/* Heavy center that eats your cursor */
+.stage .blocker{
+  position:absolute;
+  inset:20px;
+  background:transparent;
+  pointer-events:auto;
+}
+
+/* Edge ring on hover */
+.stage:hover::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  border:2px solid rgba(139,206,255,.7);
+  border-radius:16px;
+  pointer-events:none;
+}
+</style>
+</head>
+<body>
+
+<h2>Edge-Hover Image Injector 🧪</h2>
+
+<div class="lab">
+
+<!-- ========== LEFT: CONTROLS ========== -->
+<div id="injector">
+<strong>Your injected code (CSS or JS):</strong>
+<textarea id="code">
+// You can reference:
+// img  -> the image element
+// intensity -> 0 to 1 from mouse position
+
+img.style.filter =
+  `saturate(${1 + intensity}) brightness(${1 + intensity * .5})`;
+</textarea>
+
+<div class="controls">
+  <button id="runBtn">Apply injection</button>
+  <button id="resetBtn">Reset</button>
+
+  <label>
+    Load image:
+    <input type="file" id="fileLoader" accept="image/*">
+  </label>
+
+  <input id="urlInput" placeholder="Paste image URL here" style="flex:1">
+  <button id="urlBtn">Load URL</button>
+</div>
+
+<div class="slider-wrap">
+  Intensity (mouse-linked):
+  <input type="range" id="intensitySlider" min="0" max="1" step="0.01" value="0">
+</div>
+
+<div class="controls" style="margin-top:8px;">
+  <button id="savePng">Download PNG</button>
+  <button id="saveJpg">Download JPG</button>
+</div>
+</div>
+
+<!-- ========== RIGHT: IMAGE STAGE ========== -->
+<div>
+  <div class="stage" id="stage">
+    <div class="blocker"></div>
+    <img id="canvasImg"
+         src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=900&q=80"
+         width="500"
+         crossorigin="anonymous"
+         alt="test image">
+  </div>
+  <p style="font-size:14px; opacity:.8;">
+    • Center = no mouse • Edge = hover works
+  </p>
+</div>
+
+</div>
+
+<script>
+const codeBox = document.getElementById("code");
+const runBtn = document.getElementById("runBtn");
+const resetBtn = document.getElementById("resetBtn");
+const img = document.getElementById("canvasImg");
+const stage = document.getElementById("stage");
+const slider = document.getElementById("intensitySlider");
+
+const fileLoader = document.getElementById("fileLoader");
+const urlInput = document.getElementById("urlInput");
+const urlBtn = document.getElementById("urlBtn");
+
+const savePng = document.getElementById("savePng");
+const saveJpg = document.getElementById("saveJpg");
+
+// ---------- RUN INJECTION ----------
+function applyInjection(intensity = slider.value){
+  try{
+    new Function("img","intensity", codeBox.value)(img, intensity);
+  }catch(e){
+    alert("Your code hiccuped: " + e.message);
+  }
+}
+
+runBtn.addEventListener("click", () => applyInjection());
+
+// ---------- RESET ----------
+resetBtn.addEventListener("click", () => {
+  codeBox.value = "";
+  img.style = "";
+  slider.value = 0;
+});
+
+// ---------- LOAD IMAGE: FILE ----------
+fileLoader.addEventListener("change", e => {
+  const file = e.target.files[0];
+  if(!file) return;
+  const url = URL.createObjectURL(file);
+  img.src = url;
+});
+
+// ---------- LOAD IMAGE: URL ----------
+urlBtn.addEventListener("click", () => {
+  if(urlInput.value.trim()){
+    img.src = urlInput.value.trim();
+  }
+});
+
+// ---------- MOUSE → INTENSITY LINK ----------
+stage.addEventListener("mousemove", (e) => {
+  const rect = stage.getBoundingClientRect();
+  const x = (e.clientX - rect.left) / rect.width; // 0 → 1
+  slider.value = x.toFixed(2);
+  applyInjection(x);
+});
+
+// ---------- SAVE / DOWNLOAD ----------
+function exportImage(type="image/png"){
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+
+  canvas.width = img.naturalWidth;
+  canvas.height = img.naturalHeight;
+
+  ctx.filter = getComputedStyle(img).filter || "none";
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+  const a = document.createElement("a");
+  a.download = `edge-hover-export.${type === "image/png" ? "png" : "jpg"}`;
+  a.href = canvas.toDataURL(type, 0.95);
+  a.click();
+}
+
+savePng.addEventListener("click", () => exportImage("image/png"));
+saveJpg.addEventListener("click", () => exportImage("image/jpeg"));
+</script>
+
+</body>
+</html>
