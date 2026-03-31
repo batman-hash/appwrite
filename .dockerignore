@@ -1,0 +1,17 @@
+.git
+.gitignore
+.vscode
+__pycache__
+myenv
+node_modules
+npm-debug.log
+server_stdout.log
+server_stderr.log
+build
+vendor
+certs/
+*.pyc
+*.pyo
+*.pyd
+*.db-shm
+*.db-wal

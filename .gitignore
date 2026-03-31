@@ -1,33 +1,37 @@
-# Local secrets and environment files
-.env
-.env.*
-env/
-myenv/
-venv/
-.venv/
-
-# Python bytecode and caches
+# Python
 __pycache__/
 *.py[cod]
 *.pyd
+
+# Virtual environments
+.venv/
+venv/
+env/
+myenv/
+
+# IDEs
+.vscode/
+.idea/
+
+# Python test/build noise
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
 .coverage
 htmlcov/
-
-# Build outputs
 build/
 dist/
 *.egg-info/
 
-# Logs and local databases
-*.log
+# Databases, logs, env
 *.db
-*.sqlite3
+*.log
+.env
+.env.*
 
-# OS / editor noise
+# Node
+node_modules/
+
+# OS
 .DS_Store
 Thumbs.db
-.idea/
-.vscode/

@@ -1,0 +1,2515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CYBERGHOST - React Shell</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #05070c;
+      --panel: rgba(12, 16, 24, 0.84);
+      --panel-strong: rgba(7, 10, 16, 0.92);
+      --line: rgba(0, 255, 255, 0.18);
+      --line-soft: rgba(255, 0, 255, 0.16);
+      --cyan: #7dfcff;
+      --cyan-dim: #29d7ef;
+      --magenta: #ff54d6;
+      --magenta-dim: #d74cff;
+      --text: #e8edf3;
+      --muted: #90a0b4;
+      --shadow: 0 0 40px rgba(0, 255, 255, 0.11);
+      --radius: 18px;
+      --radius-lg: 28px;
+      --max: 1240px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body, #root {
+      min-height: 100%;
+      margin: 0;
+    }
+
+    body {
+      font-family: "Orbitron", system-ui, sans-serif;
+      background:
+        radial-gradient(circle at top, rgba(255, 0, 255, 0.12), transparent 30%),
+        radial-gradient(circle at 80% 20%, rgba(0, 255, 255, 0.14), transparent 25%),
+        linear-gradient(180deg, #05070c 0%, #070d14 42%, #03050a 100%);
+      color: var(--text);
+      overflow-x: hidden;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    button,
+    input,
+    textarea,
+    select {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    .shell {
+      position: relative;
+      min-height: 100vh;
+      isolation: isolate;
+    }
+
+    .shell::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background:
+        linear-gradient(rgba(0, 255, 255, 0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 255, 255, 0.035) 1px, transparent 1px);
+      background-size: 48px 48px;
+      transform: perspective(700px) rotateX(62deg) translateY(-18%);
+      transform-origin: top center;
+      pointer-events: none;
+      opacity: 0.85;
+      z-index: -4;
+    }
+
+    .bg-media {
+      position: fixed;
+      inset: 0;
+      z-index: -5;
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    .bg-media::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(180deg, rgba(5, 7, 12, 0.1) 0%, rgba(5, 7, 12, 0.74) 54%, rgba(5, 7, 12, 0.95) 100%);
+    }
+
+    .bg-media video,
+    .bg-media img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      filter: brightness(0.42) saturate(1.06);
+      opacity: 0.7;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      backdrop-filter: blur(16px);
+      background: rgba(3, 5, 10, 0.76);
+      border-bottom: 1px solid rgba(0, 255, 255, 0.16);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.22);
+    }
+
+    .topbar-inner {
+      max-width: var(--max);
+      margin: 0 auto;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      justify-content: space-between;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 800;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+
+    .brand-badge {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, rgba(255, 84, 214, 0.92), rgba(125, 252, 255, 0.9));
+      color: #04060a;
+      box-shadow: 0 0 24px rgba(0, 255, 255, 0.25);
+      font-size: 0.9rem;
+    }
+
+    .brand-copy {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .brand-copy small {
+      color: var(--muted);
+      font-size: 0.68rem;
+      letter-spacing: 0.24em;
+    }
+
+    .nav {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      flex: 1 1 560px;
+    }
+
+    .nav a,
+    .nav button {
+      border: 1px solid rgba(0, 255, 255, 0.18);
+      border-radius: 999px;
+      padding: 9px 14px;
+      background: rgba(7, 10, 16, 0.55);
+      color: var(--cyan);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      font-size: 0.72rem;
+      transition: transform 180ms ease, border-color 180ms ease, color 180ms ease, box-shadow 180ms ease;
+    }
+
+    .nav a:hover,
+    .nav button:hover,
+    .nav .active {
+      border-color: rgba(255, 84, 214, 0.48);
+      color: var(--magenta);
+      box-shadow: 0 0 18px rgba(255, 84, 214, 0.12);
+      transform: translateY(-1px);
+    }
+
+    .nav-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .pill {
+      border: 1px solid rgba(125, 252, 255, 0.18);
+      background: rgba(7, 10, 16, 0.6);
+      color: var(--text);
+      border-radius: 999px;
+      padding: 9px 14px;
+      font-size: 0.72rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .pill.alt {
+      border-color: rgba(255, 84, 214, 0.22);
+    }
+
+    .page {
+      max-width: var(--max);
+      margin: 0 auto;
+      padding: 28px 20px 88px;
+    }
+
+    .hero {
+      position: relative;
+      display: grid;
+      gap: 24px;
+      grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+      align-items: stretch;
+      margin-top: 12px;
+    }
+
+    .hero-card,
+    .panel,
+    .glass,
+    .stat,
+    .section-card,
+    .message-card,
+    .grid-card,
+    .sample-card,
+    .topic-card,
+    .track-card,
+    .tool-card,
+    .pay-card {
+      background: linear-gradient(180deg, rgba(16, 20, 30, 0.92), rgba(7, 10, 16, 0.94));
+      border: 1px solid rgba(125, 252, 255, 0.14);
+      box-shadow: var(--shadow);
+      border-radius: var(--radius-lg);
+    }
+
+    .hero-card {
+      padding: 30px;
+      overflow: hidden;
+    }
+
+    .eyebrow {
+      color: var(--cyan);
+      letter-spacing: 0.32em;
+      text-transform: uppercase;
+      font-size: 0.68rem;
+      margin-bottom: 14px;
+    }
+
+    .hero h1,
+    .page-title {
+      margin: 0;
+      font-size: clamp(2rem, 5vw, 4.2rem);
+      line-height: 0.98;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      background: linear-gradient(135deg, var(--magenta), var(--cyan));
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero p,
+    .lede {
+      color: rgba(232, 237, 243, 0.86);
+      line-height: 1.8;
+      font-size: 0.95rem;
+      max-width: 70ch;
+    }
+
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 22px;
+    }
+
+    .cta,
+    .ghost,
+    .chip-action {
+      border-radius: 999px;
+      border: 1px solid rgba(125, 252, 255, 0.22);
+      background: linear-gradient(135deg, rgba(0, 255, 255, 0.12), rgba(255, 84, 214, 0.12));
+      color: var(--text);
+      padding: 11px 16px;
+      font-size: 0.76rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+    }
+
+    .ghost {
+      background: rgba(7, 10, 16, 0.4);
+    }
+
+    .cta:hover,
+    .ghost:hover,
+    .chip-action:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 0 18px rgba(0, 255, 255, 0.14);
+      border-color: rgba(255, 84, 214, 0.4);
+    }
+
+    .hero-side {
+      display: grid;
+      gap: 16px;
+      grid-template-rows: auto auto;
+    }
+
+    .media-frame {
+      position: relative;
+      min-height: 280px;
+      overflow: hidden;
+      border-radius: var(--radius-lg);
+      border: 1px solid rgba(125, 252, 255, 0.14);
+      background: rgba(7, 10, 16, 0.9);
+    }
+
+    .media-frame video,
+    .media-frame img {
+      width: 100%;
+      height: 100%;
+      min-height: 280px;
+      object-fit: cover;
+      display: block;
+    }
+
+    .media-frame .media-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(5, 7, 12, 0.08), rgba(5, 7, 12, 0.72));
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .stat {
+      padding: 18px;
+    }
+
+    .stat strong {
+      display: block;
+      font-size: 1.45rem;
+      line-height: 1;
+      margin-bottom: 8px;
+      color: var(--cyan);
+    }
+
+    .stat span {
+      color: var(--muted);
+      font-size: 0.72rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      line-height: 1.5;
+    }
+
+    .section {
+      margin-top: 24px;
+    }
+
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: end;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+
+    .section-head h2 {
+      margin: 0;
+      font-size: 1.1rem;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--cyan);
+    }
+
+    .section-head p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.7;
+      max-width: 70ch;
+    }
+
+    .grid {
+      display: grid;
+      gap: 16px;
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+    }
+
+    .grid-2 > * {
+      grid-column: span 6;
+    }
+
+    .grid-3 > * {
+      grid-column: span 4;
+    }
+
+    .grid-4 > * {
+      grid-column: span 3;
+    }
+
+    .grid-card,
+    .section-card,
+    .topic-card,
+    .sample-card,
+    .track-card,
+    .tool-card,
+    .pay-card,
+    .message-card {
+      padding: 18px;
+    }
+
+    .grid-card h3,
+    .section-card h3,
+    .topic-card h3,
+    .sample-card h3,
+    .track-card h3,
+    .tool-card h3,
+    .pay-card h3 {
+      margin: 0 0 10px;
+      font-size: 0.92rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--magenta);
+    }
+
+    .grid-card p,
+    .section-card p,
+    .topic-card p,
+    .sample-card p,
+    .track-card p,
+    .tool-card p,
+    .pay-card p,
+    .message-card p {
+      margin: 0;
+      color: rgba(232, 237, 243, 0.82);
+      line-height: 1.8;
+      font-size: 0.92rem;
+    }
+
+    .tag-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .tag {
+      border: 1px solid rgba(255, 84, 214, 0.18);
+      border-radius: 999px;
+      padding: 7px 12px;
+      color: var(--cyan);
+      background: rgba(7, 10, 16, 0.56);
+      font-size: 0.72rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .article-layout {
+      display: grid;
+      gap: 16px;
+    }
+
+    .article-block {
+      padding: 20px;
+      border-radius: var(--radius-lg);
+      background: linear-gradient(180deg, rgba(14, 18, 28, 0.9), rgba(7, 10, 16, 0.92));
+      border: 1px solid rgba(125, 252, 255, 0.14);
+    }
+
+    .article-block h3 {
+      margin: 0 0 10px;
+      color: var(--cyan);
+      font-size: 0.94rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+
+    .article-block p {
+      margin: 0;
+      line-height: 1.82;
+      color: rgba(232, 237, 243, 0.84);
+    }
+
+    .form-grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .form-grid.two {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .field {
+      display: grid;
+      gap: 7px;
+    }
+
+    .field label {
+      font-size: 0.72rem;
+      letter-spacing: 0.12em;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+
+    .field input,
+    .field textarea,
+    .field select {
+      width: 100%;
+      border-radius: 14px;
+      border: 1px solid rgba(125, 252, 255, 0.15);
+      background: rgba(4, 7, 12, 0.82);
+      color: var(--text);
+      padding: 12px 14px;
+      outline: none;
+    }
+
+    .field textarea {
+      min-height: 120px;
+      resize: vertical;
+    }
+
+    .field input:focus,
+    .field textarea:focus,
+    .field select:focus {
+      border-color: rgba(255, 84, 214, 0.48);
+      box-shadow: 0 0 0 3px rgba(255, 84, 214, 0.08);
+    }
+
+    .stack {
+      display: grid;
+      gap: 14px;
+    }
+
+    .auth-button-row,
+    .toolbar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .message-board {
+      display: grid;
+      gap: 10px;
+      max-height: 420px;
+      overflow: auto;
+      padding-right: 6px;
+    }
+
+    .message-card {
+      display: grid;
+      gap: 6px;
+    }
+
+    .message-card .meta {
+      color: var(--cyan);
+      font-size: 0.7rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+
+    .panel {
+      padding: 20px;
+    }
+
+    .subtle {
+      color: var(--muted);
+      font-size: 0.76rem;
+      line-height: 1.6;
+    }
+
+    .inline-note {
+      color: var(--muted);
+      font-size: 0.72rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin: 0;
+    }
+
+    .split {
+      display: grid;
+      gap: 16px;
+      grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr);
+    }
+
+    .audio-player,
+    audio {
+      width: 100%;
+    }
+
+    .playlist {
+      display: grid;
+      gap: 12px;
+    }
+
+    .track-card {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+    }
+
+    .track-info {
+      display: grid;
+      gap: 4px;
+    }
+
+    .track-info small {
+      color: var(--muted);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      font-size: 0.68rem;
+    }
+
+    .track-actions,
+    .sample-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .sample-top {
+      display: flex;
+      align-items: start;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .sample-meta,
+    .track-meta {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+
+    .mini {
+      border-radius: 999px;
+      padding: 6px 10px;
+      border: 1px solid rgba(125, 252, 255, 0.14);
+      background: rgba(7, 10, 16, 0.56);
+      color: var(--muted);
+      font-size: 0.67rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .gallery {
+      display: grid;
+      gap: 16px;
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+    }
+
+    .gallery > * {
+      grid-column: span 6;
+    }
+
+    .gallery figure {
+      margin: 0;
+      overflow: hidden;
+      border-radius: var(--radius-lg);
+      border: 1px solid rgba(125, 252, 255, 0.14);
+      background: rgba(7, 10, 16, 0.92);
+    }
+
+    .gallery img {
+      width: 100%;
+      display: block;
+    }
+
+    .gallery figcaption {
+      padding: 14px 16px 16px;
+      color: var(--muted);
+      font-size: 0.78rem;
+      line-height: 1.6;
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.65);
+      backdrop-filter: blur(10px);
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      z-index: 50;
+    }
+
+    .modal {
+      width: min(640px, 100%);
+      border-radius: 24px;
+      padding: 20px;
+      border: 1px solid rgba(125, 252, 255, 0.16);
+      background: linear-gradient(180deg, rgba(16, 20, 30, 0.98), rgba(6, 8, 14, 0.98));
+      box-shadow: 0 0 60px rgba(0, 0, 0, 0.5);
+    }
+
+    .modal-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: start;
+      margin-bottom: 16px;
+    }
+
+    .modal-head h2 {
+      margin: 0;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      font-size: 1rem;
+      color: var(--cyan);
+    }
+
+    .tabs {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin: 10px 0 16px;
+    }
+
+    .tab {
+      border-radius: 999px;
+      padding: 8px 12px;
+      border: 1px solid rgba(125, 252, 255, 0.16);
+      background: rgba(7, 10, 16, 0.64);
+      color: var(--text);
+      font-size: 0.72rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .tab.active {
+      border-color: rgba(255, 84, 214, 0.42);
+      color: var(--magenta);
+    }
+
+    .empty {
+      padding: 24px;
+      border-radius: var(--radius-lg);
+      border: 1px dashed rgba(125, 252, 255, 0.18);
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .footer {
+      max-width: var(--max);
+      margin: 0 auto;
+      padding: 0 20px 30px;
+      color: var(--muted);
+      font-size: 0.72rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+
+    @media (max-width: 1100px) {
+      .hero,
+      .split {
+        grid-template-columns: 1fr;
+      }
+
+      .grid-4 > *,
+      .grid-3 > *,
+      .grid-2 > * {
+        grid-column: span 12;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .topbar-inner {
+        padding: 14px 14px 12px;
+      }
+
+      .nav {
+        justify-content: flex-start;
+      }
+
+      .page {
+        padding: 18px 14px 72px;
+      }
+
+      .hero-card,
+      .panel,
+      .grid-card,
+      .section-card,
+      .topic-card,
+      .sample-card,
+      .track-card,
+      .tool-card,
+      .pay-card,
+      .message-card,
+      .article-block {
+        padding: 16px;
+      }
+
+      .hero h1,
+      .page-title {
+        font-size: clamp(1.9rem, 12vw, 3rem);
+      }
+
+      .stats,
+      .form-grid.two {
+        grid-template-columns: 1fr;
+      }
+
+      .gallery > * {
+        grid-column: span 12;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="module">
+    import React, { useEffect, useMemo, useRef, useState } from "https://esm.sh/react@18";
+    import { createRoot } from "https://esm.sh/react-dom@18/client";
+    import htm from "https://esm.sh/htm";
+
+    const html = htm.bind(React.createElement);
+    const { useCallback } = React;
+
+    const ASSETS = {
+      video: {
+        preview: "assets/video/preview.mp4",
+        car: "assets/video/carvideo.mp4",
+        piano: "assets/video/pianoclassic.mp4",
+      },
+      image: {
+        cyberpunk: "assets/images/cyberpunk.png",
+        immageme: "assets/images/immageme.png",
+      },
+      audio: {
+        clap: "assets/audio/clap_sound.mp3",
+        noise: "assets/audio/audio.wav",
+      },
+      doc: "assets/docs/drive_fx.pdf",
+    };
+
+    const ROUTES = {
+      "/": "chat",
+      "/root.html": "chat",
+      "/index.html": "home",
+      "/react_app.html": "home",
+      "/room.html": "room",
+      "/events.html": "events",
+      "/create_global_events.html": "events",
+      "/event_music.html": "eventMusic",
+      "/global_events.html": "events",
+      "/music_nerves.html": "musicNerves",
+      "/producer_styles.html": "producerStyles",
+      "/favourite_artists.html": "favouriteArtists",
+      "/favourite_libraries.html": "favouriteLibraries",
+      "/jockes_and_memes.html": "memes",
+      "/room_events.html": "roomEvents",
+      "/tracklist.html": "tracklist",
+      "/login.html": "tracklist",
+      "/Posterwall.html": "posterwall",
+      "/posterwall.html": "posterwall",
+      "/sound_design.html": "soundDesign",
+      "/contact.html": "contact",
+      "/shop.html": "shop",
+      "/shop_cart.html": "payments",
+      "/cash_till.html": "payments",
+      "/debit_card.html": "payments",
+      "/paypal.html": "payments",
+      "/audio_mixing.html": "audioMixer",
+      "/recmp3.html": "audioMixer",
+      "/simple_web_audio_mixing_mastering_track (5) - Copia.html": "audioMixer",
+    };
+
+    const NAV_ITEMS = [
+      ["/root.html", "Chat"],
+      ["/index.html", "Launch"],
+      ["/room.html", "Room"],
+      ["/shop.html", "Shop"],
+      ["/sound_design.html", "Sound Design"],
+      ["/tracklist.html", "Tracks"],
+      ["/contact.html", "Contact"],
+    ];
+
+    const ARTICLE_PAGES = {
+      events: {
+        eyebrow: "Europe 2000 - Today",
+        title: "GLOBAL EVENTS",
+        subtitle: "The scene keeps changing shape without losing its core ritual.",
+        lede:
+          "From superclubs to specialized nights, the European dance floor became a network of local scenes that constantly traded energy, sound, and visual language.",
+        media: ASSETS.video.preview,
+        cards: [
+          { title: "2000-2005", text: "Big-room club culture, trance peaks, and transnational festival circuits set the tone for a connected decade." },
+          { title: "2006-2012", text: "Minimal, electro, bloghouse, and warehouse parties kept the underground moving while Berlin and Amsterdam sharpened their identities." },
+          { title: "2013-2019", text: "Festival infrastructure matured, livestream culture expanded, and niche micro-scenes stayed vital." },
+          { title: "2020-Today", text: "After disruption, scenes came back with stronger community focus, safer spaces, and renewed appreciation for local curation." },
+        ],
+        sections: [
+          {
+            title: "A federation of scenes",
+            text:
+              "Europe never became one single nightlife story. Instead it became a federation of scenes, each with its own code, venue rhythm, and social energy.",
+          },
+          {
+            title: "Spectacle and intimacy",
+            text:
+              "The strongest cities learned how to keep both scales alive at once: massive festivals for the loud signal and smaller rooms for the deeper conversation.",
+          },
+        ],
+      },
+      eventMusic: {
+        eyebrow: "Stories - Context - Club Culture",
+        title: "EVENT MUSIC",
+        subtitle: "Acid house, analog revival, and the rituals around sound.",
+        lede:
+          "Event music is not just a genre label. It is a social machine built from repetition, tension, release, and the shared memory of a room full of people moving together.",
+        media: ASSETS.video.car,
+        cards: [
+          { title: "Acid House Today", text: "A living genre with old machines, new software, and dance floors that still react to the 303 pressure." },
+          { title: "Why Events Matter", text: "Clubs and festivals shape taste, scenes, identities, and the social ritual around sound." },
+          { title: "Analog Revival", text: "Vintage drum machines and tactile workflows keep event-focused music immediate and physical." },
+          { title: "Local To Global", text: "What starts in one underground room can travel fast and become part of the wider vocabulary." },
+        ],
+        sections: [
+          {
+            title: "Minimalism and hypnosis",
+            text:
+              "Acid house thrives on repetition. Patterns loop, evolve slowly, and draw listeners into a trance-like state where groove and texture do the heavy lifting.",
+          },
+          {
+            title: "Technology and creativity",
+            text:
+              "The genre emerged from affordable electronic gear. Producers learned through experimentation, pushing machines beyond their intended function until the machines started speaking in a new voice.",
+          },
+          {
+            title: "Why the legacy persists",
+            text:
+              "The spirit never really left. Festivals and underground rooms around the world keep reinterpreting the original idea: collective release through simple, powerful patterns.",
+          },
+        ],
+      },
+      producerStyles: {
+        eyebrow: "Genres - Workflow - Live Performance - DAW Craft",
+        title: "PRODUCER STYLES",
+        subtitle: "How people build records, sessions, and live sets.",
+        lede:
+          "This page turns producer habits into a map: how people choose sounds, organize sessions, and decide when a track is actually done.",
+        media: ASSETS.video.preview,
+        cards: [
+          { title: "Genres and hybrids", text: "Techno, house, trap, bass, ambient, and crossovers. Each style has a reason to exist." },
+          { title: "DAW workflow", text: "Templates, routing, busses, markers, macros, and faster arrangement decisions." },
+          { title: "Sound design", text: "Building leads, plucks, basses, textures, and drum layers with synths and effects." },
+          { title: "Arrangement logic", text: "Energy curves, transitions, automation, and storytelling with structure." },
+          { title: "Mixing and mastering", text: "EQ priorities, dynamics control, width, loudness, and playback checks." },
+          { title: "Playing live", text: "Stem organization, controller mapping, fallback plans, and stage-ready sessions." },
+        ],
+        sections: [
+          {
+            title: "A useful rule",
+            text:
+              "Pick one source, one motion layer, and one space layer before reaching for more plugins. The fastest path to clarity is often subtraction.",
+          },
+          {
+            title: "Hidden access",
+            text:
+              "The original site had a hidden sound design unlock. In the React shell the page is always reachable, but the idea stays: a slower path into the deeper pages can be part of the experience.",
+          },
+        ],
+      },
+      soundDesign: {
+        eyebrow: "Theory - Programming - Instruments",
+        title: "SOUND DESIGN",
+        subtitle: "How to build leads, plucks, basses, textures, and drum layers.",
+        lede:
+          "Sound design combines ear training, a few strong rules, and a willingness to break the rules once you understand them.",
+        media: ASSETS.video.piano,
+        cards: [
+          { title: "Patch starting point", text: "Use one source, one motion layer, and one space layer before reaching for more complexity." },
+          { title: "Transient vs tail", text: "Separate impact from atmosphere so the lead element stays readable in a dense mix." },
+          { title: "Midrange control", text: "Most emotional detail lives in the mids. If the mids are crowded, the sound feels flat fast." },
+          { title: "Digital instruments", text: "A digital instrument is signal flow: input, processing, modulation, and output." },
+          { title: "Programming", text: "Even a simple gain control is already a musical decision about how a signal evolves in time." },
+          { title: "Hardware and gear", text: "Controllers, pedals, synths, and interfaces all become part of the performance when they are mapped well." },
+        ],
+        sections: [
+          {
+            title: "Useful link",
+            text: "The project still includes the Drive FX reference PDF. It can stay as a downloadable document from the same frontend shell.",
+          },
+          {
+            title: "Programming note",
+            text:
+              "A digital instrument usually begins with a simple diagram: MIDI input, voice engine, filters, envelopes, effects, and output. From there you can decide how much of the chain should be fixed and how much should be live.",
+          },
+          {
+            title: "Real-time constraints",
+            text:
+              "The best sounding tools also respect latency, CPU budget, and the player's hands. A good synth is as much about feedback as it is about tone.",
+          },
+        ],
+        links: [
+          { label: "Drive FX PDF", href: ASSETS.doc },
+        ],
+      },
+      musicNerves: {
+        eyebrow: "Discussion starters",
+        title: "MUSIC NERVES",
+        subtitle: "The sounds and moments that hit first.",
+        lede: "A page for the sonic triggers that still get under your skin.",
+        cards: [
+          { title: "Drop moments", text: "Which drop still gives you chills, and what exactly makes it work?" },
+          { title: "Vocal impact", text: "A whisper, chop, or phrase can change everything." },
+          { title: "Sound design", text: "Name the synth, texture, or bass movement that feels physically powerful." },
+        ],
+      },
+      favouriteArtists: {
+        eyebrow: "Influence map",
+        title: "FAVOURITE ARTISTS",
+        subtitle: "The people you return to when your own taste needs a reset.",
+        lede: "All-time favorites, current obsessions, underground picks, and the invisible map of influence.",
+        cards: [
+          { title: "All-time favorites", text: "The artists you always come back to no matter what phase you are in." },
+          { title: "Current obsessions", text: "Who you are looping right now, and what keeps pulling you back in." },
+          { title: "Underground picks", text: "Names more people should know before the algorithm ruins the secret." },
+          { title: "Influence map", text: "Artists who shaped your workflow, aesthetic, or sonic direction." },
+        ],
+      },
+      favouriteLibraries: {
+        eyebrow: "Sample packs - Presets - Tools",
+        title: "FAVOURITE LIBRARIES",
+        subtitle: "Libraries worth sharing because they actually get used.",
+        lede: "Drum kits, presets, textures, and tools that move from the downloads folder into real sessions.",
+        cards: [
+          { title: "Drum libraries", text: "Kick packs, snares, percussion folders, and one-shots that cut through cleanly." },
+          { title: "Synth presets", text: "Preset banks for leads, plucks, basses, pads, and cinematic textures." },
+          { title: "Vocal packs", text: "Useful vocal chops, spoken phrases, hooks, and atmospheric layers." },
+          { title: "FX tools", text: "Transitions, impacts, risers, noise layers, and weird design material." },
+        ],
+      },
+      memes: {
+        eyebrow: "Community noise",
+        title: "JOKES AND MEMES",
+        subtitle: "Production fails, studio chaos, and the relief of not being alone.",
+        lede: "Sometimes the best way to talk about music is to laugh at the mess it creates.",
+        cards: [
+          { title: "Production fails", text: "The take that went sideways but still taught you something useful." },
+          { title: "Studio mishaps", text: "The cable that vanished, the DAW crash, the accidental clip gain disaster." },
+          { title: "Loop comedy", text: "The five-hour loop that felt like genius until the next morning." },
+        ],
+      },
+      roomEvents: {
+        eyebrow: "Plugins - VSTs - Download Hub",
+        title: "PARTY AND EVENTS",
+        subtitle: "Highlights for the community and the files that travel with them.",
+        lede: "A centralized grid for plugin picks, uploads, and event-specific downloads.",
+        cards: [
+          { title: "Plugin picks", text: "Community picks for synths, FX, and creative tools used in room sessions." },
+          { title: "VST upload", text: "Upload your own presets, patch banks, and plugin snapshots for sharing." },
+          { title: "VST download", text: "Download curated VST resources and packs from room events and sessions." },
+          { title: "Event files", text: "Session notes and files grouped by date for each party and meetup." },
+        ],
+      },
+    };
+
+    const PAGE_LINKS = [
+      { path: "/events.html", label: "Events" },
+      { path: "/event_music.html", label: "Event Music" },
+      { path: "/producer_styles.html", label: "Producer Styles" },
+      { path: "/music_nerves.html", label: "Music Nerves" },
+      { path: "/favourite_artists.html", label: "Artists" },
+      { path: "/favourite_libraries.html", label: "Libraries" },
+      { path: "/jockes_and_memes.html", label: "Memes" },
+      { path: "/room_events.html", label: "Room Events" },
+      { path: "/sound_design.html", label: "Sound Design" },
+    ];
+
+    const BUILTIN_SAMPLES = [
+      { id: "clap-ritual", name: "Clap Ritual", bpm: 128, key: "Am", format: "mp3", sourceUrl: ASSETS.audio.clap, freeDownloadUrl: ASSETS.audio.clap, downloads: 42 },
+      { id: "ghost-floor", name: "Ghost Floor", bpm: 122, key: "Fm", format: "wav", sourceUrl: ASSETS.audio.noise, freeDownloadUrl: ASSETS.audio.noise, downloads: 18 },
+      { id: "cyan-pulse", name: "Cyan Pulse", bpm: 118, key: "Dm", format: "mp3", sourceUrl: ASSETS.audio.clap, freeDownloadUrl: ASSETS.audio.clap, downloads: 27 },
+    ];
+
+    function sanitizePathname(pathname) {
+      if (!pathname) return "/";
+      return pathname.replace(/\/+$/, "") || "/";
+    }
+
+    function routeLabel(route) {
+      const labels = {
+        home: "Launch",
+        chat: "Chat",
+        room: "The Room",
+        events: "Global Events",
+        eventMusic: "Event Music",
+        musicNerves: "Music Nerves",
+        producerStyles: "Producer Styles",
+        favouriteArtists: "Favourite Artists",
+        favouriteLibraries: "Favourite Libraries",
+        memes: "Jokes And Memes",
+        roomEvents: "Room Events",
+        tracklist: "Track Transmission",
+        posterwall: "Posterwall",
+        soundDesign: "Sound Design",
+        contact: "Contact",
+        shop: "Sample Shop",
+        payments: "Payments",
+        audioMixer: "Audio Mixer",
+      };
+      return labels[route] || route;
+    }
+
+    function resolveRoute(pathname) {
+      const clean = sanitizePathname(pathname);
+      return ROUTES[clean] || "chat";
+    }
+
+    function fmtDate(value) {
+      if (!value) return "";
+      try {
+        return new Date(value).toLocaleString();
+      } catch {
+        return String(value);
+      }
+    }
+
+    async function readJson(path, options = {}) {
+      const res = await fetch(path, {
+        credentials: "include",
+        ...options,
+        headers: {
+          ...(options.headers || {}),
+          ...(options.body ? {} : {}),
+        },
+      });
+      let data = null;
+      try {
+        data = await res.json();
+      } catch {
+        data = null;
+      }
+      if (!res.ok || (data && data.success === false)) {
+        const error = data && data.error ? data.error : `Request failed (${res.status})`;
+        throw new Error(error);
+      }
+      return data;
+    }
+
+    function navClass(active, target) {
+      return active === target ? "active" : "";
+    }
+
+    function PageFrame({ title, subtitle, eyebrow, lede, media, heroCard, children }) {
+      return html`
+        <section className="page">
+          <div className="hero">
+            <article className="hero-card">
+              <div className="eyebrow">${eyebrow}</div>
+              <h1>${title}</h1>
+              <p>${subtitle}</p>
+              ${lede ? html`<p className="lede">${lede}</p>` : null}
+              ${heroCard}
+            </article>
+            <div className="hero-side">
+              ${media ? html`
+                <div className="media-frame">
+                  ${String(media).endsWith(".mp4") ? html`<video src=${media} autoPlay muted loop playsInline></video>` : html`<img src=${media} alt="" />`}
+                  <div className="media-overlay"></div>
+                </div>
+              ` : null}
+              <div className="glass panel">
+                <div className="tag-row">
+                  ${PAGE_LINKS.map(link => html`<a key=${link.path} className="chip-action" href=${link.path}>${link.label}</a>`)}
+                </div>
+              </div>
+            </div>
+          </div>
+          ${children}
+        </section>
+      `;
+    }
+
+    function TopBar({ route, onNavigate, currentUser, onOpenAuth, onLogout }) {
+      return html`
+        <header className="topbar">
+          <div className="topbar-inner">
+            <a className="brand" href="/root.html" onClick=${(e) => { e.preventDefault(); onNavigate("/root.html"); }}>
+              <div className="brand-badge">CG</div>
+              <div className="brand-copy">
+                <span>CYBERGHOST</span>
+                <small>React shell</small>
+              </div>
+            </a>
+            <nav className="nav">
+              ${NAV_ITEMS.map(([path, label]) => html`
+                <a
+                  key=${path}
+                  href=${path}
+                  className=${navClass(route, resolveRoute(path))}
+                  onClick=${(e) => {
+                    e.preventDefault();
+                    onNavigate(path);
+                  }}
+                >${label}</a>
+              `)}
+            </nav>
+            <div className="nav-actions">
+              ${currentUser ? html`<div className="pill">${currentUser.username || currentUser.email || "Signed in"}</div>` : html`<div className="pill alt">Guest</div>`}
+              <button className="pill" onClick=${() => onOpenAuth("login")}>Auth</button>
+              ${currentUser ? html`<button className="pill alt" onClick=${onLogout}>Logout</button>` : null}
+            </div>
+          </div>
+        </header>
+      `;
+    }
+
+    function StatGrid({ stats }) {
+      return html`
+        <div className="stats">
+          ${stats.map((stat) => html`
+            <div key=${stat.label} className="stat">
+              <strong>${stat.value}</strong>
+              <span>${stat.label}</span>
+            </div>
+          `)}
+        </div>
+      `;
+    }
+
+    function CardGrid({ items, columns = 3, kind = "grid-card" }) {
+      const gridClass = columns === 2 ? "grid grid-2" : columns === 4 ? "grid grid-4" : "grid grid-3";
+      return html`
+        <div className=${gridClass}>
+          ${items.map((item) => html`
+            <article key=${item.title} className=${kind}>
+              <h3>${item.title}</h3>
+              <p>${item.text}</p>
+            </article>
+          `)}
+        </div>
+      `;
+    }
+
+    function ArticlePage({ page, route, onNavigate }) {
+      return html`
+        <${PageFrame}
+          title=${page.title}
+          subtitle=${page.subtitle}
+          eyebrow=${page.eyebrow}
+          lede=${page.lede}
+          media=${page.media}
+          heroCard=${html`
+            <div className="tag-row">
+              ${(page.tags || ["Single file React shell", "Legacy HTML routed here", "One backend"]).map(tag => html`<span key=${tag} className="tag">${tag}</span>`)}
+            </div>
+          `}
+        >
+          <div className="section">
+            <div className="section-head">
+              <h2>Overview</h2>
+              <p>This route is now rendered by the shared React shell. The old HTML filename still works, but it lands here.</p>
+            </div>
+            <${CardGrid} items=${page.cards || []} columns=${4} />
+          </div>
+
+          ${page.sections && page.sections.length ? html`
+            <div className="section">
+              <div className="section-head">
+                <h2>Detail</h2>
+                <p>Content blocks collected from the legacy pages and rewritten into reusable React sections.</p>
+              </div>
+              <div className="article-layout">
+                ${page.sections.map((block) => html`
+                  <article key=${block.title} className="article-block">
+                    <h3>${block.title}</h3>
+                    <p>${block.text}</p>
+                  </article>
+                `)}
+              </div>
+            </div>
+          ` : null}
+
+          ${page.links && page.links.length ? html`
+            <div className="section">
+              <div className="section-head">
+                <h2>Links</h2>
+                <p>Useful downloads and references for this section.</p>
+              </div>
+              <div className="toolbar">
+                ${page.links.map((link) => html`
+                  <a key=${link.href} className="cta" href=${link.href} target="_blank" rel="noreferrer">${link.label}</a>
+                `)}
+              </div>
+            </div>
+          ` : null}
+        </${PageFrame}>
+      `;
+    }
+
+    function HomePage({ onNavigate, onOpenAuth, currentUser }) {
+      const stats = [
+        { value: "1", label: "React shell" },
+        { value: "20+", label: "Legacy pages folded in" },
+        { value: "8", label: "Shared media assets" },
+        { value: currentUser ? "On" : "Off", label: "Signed in" },
+      ];
+
+      const features = [
+        { title: "Root Chat", text: "The main chat experience with live messages, auth, and online count." },
+        { title: "Launch Page", text: "The original EP-style home page reworked as a reusable hero view." },
+        { title: "Room + Events", text: "Community topics, event notes, and festival context in one layout." },
+        { title: "Sound Design", text: "A central page for DSP, instruments, and useful reference files." },
+      ];
+
+      return html`
+        <${PageFrame}
+          title="GHOST ID CARD EP"
+          subtitle="Ghostfirewall EP"
+          eyebrow="Launch"
+          lede="The old front end is now consolidated into a single React shell. Legacy HTML filenames still load, but they all route through this entry point."
+          media=${ASSETS.video.preview}
+          heroCard=${html`
+            <div className="hero-actions">
+              <button className="cta" onClick=${() => onNavigate("/root.html")}>Open Chat</button>
+              <button className="ghost" onClick=${() => onNavigate("/shop.html")}>Open Shop</button>
+              <button className="ghost" onClick=${() => onOpenAuth("login")}>Login / Register</button>
+            </div>
+          `}
+        >
+          <div className="section">
+            <div className="section-head">
+              <h2>Snapshot</h2>
+              <p>One shell, one backend, and a cleaner route to the same music community experience.</p>
+            </div>
+            <${StatGrid} stats=${stats} />
+          </div>
+
+          <div className="section">
+            <div className="section-head">
+              <h2>What is inside</h2>
+              <p>The old HTML pages are now treated as routes into a single app instead of separate standalone screens.</p>
+            </div>
+            <${CardGrid} items=${features} columns=${4} />
+          </div>
+
+          <div className="section split">
+            <div className="panel">
+              <div className="section-head">
+                <h2>Subscribe</h2>
+                <p>Keep the project connected to the Flask backend and the SQLite database.</p>
+              </div>
+              <${SubscribeForm} />
+            </div>
+            <div className="panel">
+              <div className="section-head">
+                <h2>Quick routes</h2>
+                <p>Move around the rebuilt shell without hunting for the old filenames.</p>
+              </div>
+              <div className="stack">
+                ${[
+                  ["/room.html", "The Room"],
+                  ["/event_music.html", "Event Music"],
+                  ["/sound_design.html", "Sound Design"],
+                  ["/tracklist.html", "Track Transmission"],
+                  ["/contact.html", "Contact"],
+                ].map(([path, label]) => html`
+                  <button key=${path} className="cta" onClick=${() => onNavigate(path)}>${label}</button>
+                `)}
+              </div>
+            </div>
+          </div>
+        </${PageFrame}>
+      `;
+    }
+
+    function RootChatPage({ onNavigate, onOpenAuth, currentUser, onUserChange }) {
+      return html`
+        <${PageFrame}
+          title="ROOT CHAT"
+          subtitle="Login with username and password to access chat"
+          eyebrow="Community"
+          lede="The backend already tracks messages and online users. This React shell keeps that behavior but gives it a cleaner skin."
+          media=${ASSETS.video.preview}
+          heroCard=${html`
+            <div className="tag-row">
+              <span className="tag">live chat</span>
+              <span className="tag">sqlite backed</span>
+              <span className="tag">session aware</span>
+            </div>
+          `}
+        >
+          <div className="section split">
+            <div className="panel">
+              <div className="section-head">
+                <h2>Chat</h2>
+                <p>Use either the quick chat login or the global auth modal. Both route into the same Flask session.</p>
+              </div>
+              <${ChatPanel} currentUser=${currentUser} onUserChange=${onUserChange} onOpenAuth=${onOpenAuth} />
+            </div>
+            <div className="panel">
+              <div className="section-head">
+                <h2>Topics</h2>
+                <p>These are the same community prompts that used to live across the old room pages.</p>
+              </div>
+              <div className="grid grid-2">
+                ${[
+                  ["Music Nerves", "What gives you chills when a drop lands?"],
+                  ["Producer Styles", "DAW wars, workflow tips, and signature techniques."],
+                  ["Favourite Artists", "Who inspires your sound right now?"],
+                  ["Favourite Libraries", "Which packs actually get used in sessions?"],
+                  ["Jokes and Memes", "Studio chaos, crashes, and production comedy."],
+                  ["Parties and Events", "Shows, meetups, and venue notes across Europe."],
+                ].map(([title, text]) => html`
+                  <article key=${title} className="topic-card">
+                    <h3>${title}</h3>
+                    <p>${text}</p>
+                  </article>
+                `)}
+              </div>
+            </div>
+          </div>
+          <div className="section">
+            <div className="section-head">
+              <h2>Room shortcuts</h2>
+              <p>Jump straight to the pages that used to be separate HTML documents.</p>
+            </div>
+            <div className="toolbar">
+              <button className="cta" onClick=${() => onNavigate("/room.html")}>The Room</button>
+              <button className="ghost" onClick=${() => onNavigate("/events.html")}>Global Events</button>
+              <button className="ghost" onClick=${() => onNavigate("/room_events.html")}>Room Events</button>
+            </div>
+          </div>
+        </${PageFrame}>
+      `;
+    }
+
+    function RoomPage({ onNavigate, onOpenAuth, currentUser, onUserChange }) {
+      return html`
+        <${PageFrame}
+          title="THE ROOM"
+          subtitle="Community - Music - Events"
+          eyebrow="Forum"
+          lede="A central grid for discussion, chat, and event discovery. This is where the old room pages collapse into one familiar place."
+          media=${ASSETS.video.preview}
+        >
+          <div className="section">
+            <div className="section-head">
+              <h2>Discussion topics</h2>
+              <p>These cards carry the old room categories into a single React layout.</p>
+            </div>
+            <${CardGrid}
+              columns=${3}
+              items=${[
+                { title: "Music Nerves", text: "What moments actually change your pulse when the drop arrives?" },
+                { title: "Producer Styles", text: "DAW philosophy, arrangement logic, and signature workflows." },
+                { title: "Favourite Artists", text: "Names that shape taste and remind you where the bar is." },
+                { title: "Favourite Libraries", text: "Packs and libraries that keep getting opened in real sessions." },
+                { title: "Jokes and Memes", text: "The relief valve for every broken cable and crashed project." },
+                { title: "Parties and Events", text: "Meetups, warehouses, festivals, and venue notes." },
+              ]}
+            />
+          </div>
+
+          <div className="section split">
+            <div className="panel">
+              <div className="section-head">
+                <h2>Cyber chat</h2>
+                <p>Same backend messages, same session tracking, new shell.</p>
+              </div>
+              <${ChatPanel} currentUser=${currentUser} onUserChange=${onUserChange} onOpenAuth=${onOpenAuth} />
+            </div>
+            <div className="panel">
+              <div className="section-head">
+                <h2>Europe events</h2>
+                <p>A compact event board pulled from the old room copy.</p>
+              </div>
+              <div className="stack">
+                ${[
+                  ["Berlin Tech Night", "Berlin, Germany - Underground venue"],
+                  ["Amsterdam Synth Meetup", "Amsterdam, Netherlands - Vinyl only"],
+                  ["Milano Electronic", "Milan, Italy - Live PA session"],
+                ].map(([title, text]) => html`
+                  <article key=${title} className="message-card">
+                    <div className="meta">${title}</div>
+                    <p>${text}</p>
+                  </article>
+                `)}
+              </div>
+              <div className="hero-actions" style=${{ marginTop: "18px" }}>
+                <button className="cta" onClick=${() => onNavigate("/events.html")}>Open Events</button>
+                <button className="ghost" onClick=${() => onNavigate("/room_events.html")}>Open Room Events</button>
+              </div>
+            </div>
+          </div>
+        </${PageFrame}>
+      `;
+    }
+
+    function TrackPage() {
+      const tracks = [
+        { title: "Clap Ritual", meta: "Ghostfirewall - MP3", src: ASSETS.audio.clap },
+        { title: "Ghost Floor", meta: "Ghostfirewall - WAV", src: ASSETS.audio.noise },
+        { title: "Cyan Pulse", meta: "Ghostfirewall - MP3", src: ASSETS.audio.clap },
+      ];
+      const [active, setActive] = useState(0);
+      const playerRef = useRef(null);
+
+      useEffect(() => {
+        const player = playerRef.current;
+        if (player) {
+          player.pause();
+          player.load();
+        }
+      }, [active]);
+
+      return html`
+        <${PageFrame}
+          title="TRACK TRANSMISSION"
+          subtitle="Post-Romantic Circuits - Signal Archive"
+          eyebrow="Playlist"
+          lede="The old track page becomes a compact playlist with a single player and a few signal names."
+          media=${ASSETS.image.cyberpunk}
+        >
+          <div className="section split">
+            <div className="panel">
+              <div className="section-head">
+                <h2>Tracks</h2>
+                <p>These use the existing local media assets so the page keeps working with the same static files.</p>
+              </div>
+              <div className="playlist">
+                ${tracks.map((track, index) => html`
+                  <article key=${track.title} className="track-card">
+                    <div className="track-info">
+                      <strong>${track.title}</strong>
+                      <small>${track.meta}</small>
+                    </div>
+                    <div className="track-actions">
+                      <button className="cta" onClick=${() => setActive(index)}>Play</button>
+                      <a className="ghost" href=${track.src} download>Download</a>
+                    </div>
+                  </article>
+                `)}
+              </div>
+            </div>
+            <div className="panel">
+              <div className="section-head">
+                <h2>Player</h2>
+                <p>Preview the current track and keep the archive simple.</p>
+              </div>
+              <audio ref=${playerRef} className="audio-player" controls src=${tracks[active].src}></audio>
+              <p className="subtle" style=${{ marginTop: "14px" }}>
+                Current track: ${tracks[active].title}. The file switches when you choose a different entry.
+              </p>
+            </div>
+          </div>
+        </${PageFrame}>
+      `;
+    }
+
+    function ShopPage() {
+      const [samples, setSamples] = useState(BUILTIN_SAMPLES);
+      const [activeId, setActiveId] = useState(BUILTIN_SAMPLES[0].id);
+      const active = samples.find((item) => item.id === activeId) || samples[0];
+      const fileInputRef = useRef(null);
+
+      const onPickFile = useCallback(() => fileInputRef.current && fileInputRef.current.click(), []);
+
+      const onUpload = async (event) => {
+        const file = event.target.files && event.target.files[0];
+        if (!file) return;
+        const url = URL.createObjectURL(file);
+        const next = {
+          id: `local-${Date.now()}`,
+          name: file.name.replace(/\.[^.]+$/, ""),
+          bpm: "local",
+          key: "n/a",
+          format: file.name.split(".").pop().toLowerCase(),
+          sourceUrl: url,
+          freeDownloadUrl: url,
+          downloads: 0,
+        };
+        setSamples((current) => [next, ...current]);
+        setActiveId(next.id);
+        event.target.value = "";
+      };
+
+      return html`
+        <${PageFrame}
+          title="SAMPLE SHOP"
+          subtitle="Loops and samples"
+          eyebrow="Store"
+          lede="A local sample shop with built-in previews, upload support, and the existing backend available for shared files and future extensions."
+          media=${ASSETS.video.preview}
+          heroCard=${html`
+            <div className="hero-actions">
+              <button className="cta" onClick=${onPickFile}>Upload Audio</button>
+              <button className="ghost" onClick=${() => window.open(ASSETS.audio.clap, "_blank", "noreferrer")}>Open Sample</button>
+            </div>
+          `}
+        >
+          <input ref=${fileInputRef} type="file" accept="audio/*" style=${{ display: "none" }} onChange=${onUpload} />
+
+          <div className="section split">
+            <div className="panel">
+              <div className="section-head">
+                <h2>Sample player</h2>
+                <p>Click a sample to preview it in the audio element and use the same static asset paths from the old site.</p>
+              </div>
+              <audio className="audio-player" controls src=${active.sourceUrl}></audio>
+              <div className="sample-meta">
+                <span className="mini">${active.bpm} BPM</span>
+                <span className="mini">${active.key}</span>
+                <span className="mini">${active.format.toUpperCase()}</span>
+                <span className="mini">${active.downloads} downloads</span>
+              </div>
+            </div>
+            <div className="panel">
+              <div className="section-head">
+                <h2>Upload</h2>
+                <p>Add a local audio file and it becomes a new preview card in the shop.</p>
+              </div>
+              <div className="stack">
+                <p className="subtle">Accepted: audio files from your machine. The uploaded file is previewed locally through an object URL.</p>
+                <button className="cta" onClick=${onPickFile}>Select File</button>
+              </div>
+            </div>
+          </div>
+
+          <div className="section">
+            <div className="section-head">
+              <h2>Library</h2>
+              <p>Built-in samples appear first, followed by any local upload you add in this session.</p>
+            </div>
+            <div className="grid grid-3">
+              ${samples.map((sample) => html`
+                <article key=${sample.id} className="sample-card">
+                  <div className="sample-top">
+                    <div>
+                      <h3>${sample.name}</h3>
+                      <p>${sample.format.toUpperCase()} preview ready for playback or download.</p>
+                    </div>
+                    <button className="ghost" onClick=${() => setActiveId(sample.id)}>Preview</button>
+                  </div>
+                  <div className="sample-meta">
+                    <span className="mini">${sample.bpm} BPM</span>
+                    <span className="mini">${sample.key}</span>
+                    <span className="mini">${sample.downloads} downloads</span>
+                  </div>
+                  <div className="sample-actions" style=${{ marginTop: "14px" }}>
+                    <a className="cta" href=${sample.freeDownloadUrl} download>Download</a>
+                    <button className="ghost" onClick=${() => setActiveId(sample.id)}>Play</button>
+                  </div>
+                </article>
+              `)}
+            </div>
+          </div>
+        </${PageFrame}>
+      `;
+    }
+
+    function ContactPage({ currentUser, onOpenAuth }) {
+      const [contactState, setContactState] = useState({ name: "", email: "", message: "" });
+      const [subscribeState, setSubscribeState] = useState({ username: "", email: "", weighter: "react" });
+      const [status, setStatus] = useState("");
+      const onSubmitContact = async (event) => {
+        event.preventDefault();
+        try {
+          const data = await readJson("/api/contact", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(contactState),
+          });
+          setStatus(`Message stored. Status: ${data.email_status || "sent"}.`);
+          setContactState({ name: "", email: "", message: "" });
+        } catch (error) {
+          setStatus(error.message);
+        }
+      };
+
+      const onSubmitSubscribe = async (event) => {
+        event.preventDefault();
+        try {
+          const data = await readJson("/api/subscribe", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(subscribeState),
+          });
+          setStatus(data.message || "Subscription request sent.");
+          setSubscribeState({ username: "", email: "", weighter: "react" });
+        } catch (error) {
+          setStatus(error.message);
+        }
+      };
+
+      return html`
+        <${PageFrame}
+          title="CONTACT ME"
+          subtitle="Get in touch"
+          eyebrow="Message"
+          lede="The contact flow still depends on a confirmed account and subscriber state, so this page keeps the subscribe step front and center."
+          media=${ASSETS.video.car}
+        >
+          <div className="section split">
+            <div className="panel">
+              <div className="section-head">
+                <h2>Subscribe first</h2>
+                <p>This mirrors the old site flow and keeps the backend happy before contact is submitted.</p>
+              </div>
+              <form className="form-grid" onSubmit=${onSubmitSubscribe}>
+                <div className="form-grid two">
+                  <label className="field">
+                    <span>Username</span>
+                    <input value=${subscribeState.username} onInput=${(e) => setSubscribeState((s) => ({ ...s, username: e.target.value }))} />
+                  </label>
+                  <label className="field">
+                    <span>Email</span>
+                    <input type="email" value=${subscribeState.email} onInput=${(e) => setSubscribeState((s) => ({ ...s, email: e.target.value }))} />
+                  </label>
+                </div>
+                <label className="field">
+                  <span>Tag</span>
+                  <input value=${subscribeState.weighter} onInput=${(e) => setSubscribeState((s) => ({ ...s, weighter: e.target.value }))} />
+                </label>
+                <button className="cta" type="submit">Subscribe</button>
+              </form>
+            </div>
+            <div className="panel">
+              <div className="section-head">
+                <h2>Contact message</h2>
+                <p>${currentUser ? "Use your logged-in account to send a message." : "You can open auth before trying the message form."}</p>
+              </div>
+              <form className="form-grid" onSubmit=${onSubmitContact}>
+                <div className="form-grid two">
+                  <label className="field">
+                    <span>Name</span>
+                    <input value=${contactState.name} onInput=${(e) => setContactState((s) => ({ ...s, name: e.target.value }))} />
+                  </label>
+                  <label className="field">
+                    <span>Email</span>
+                    <input type="email" value=${contactState.email} onInput=${(e) => setContactState((s) => ({ ...s, email: e.target.value }))} />
+                  </label>
+                </div>
+                <label className="field">
+                  <span>Message</span>
+                  <textarea value=${contactState.message} onInput=${(e) => setContactState((s) => ({ ...s, message: e.target.value }))}></textarea>
+                </label>
+                <div className="toolbar">
+                  <button className="cta" type="submit">Send Message</button>
+                  <button className="ghost" type="button" onClick=${() => onOpenAuth("login")}>Open Auth</button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <div className="section">
+            <div className="panel">
+              <div className="section-head">
+                <h2>Status</h2>
+                <p>Backend response feedback from subscribe or contact actions appears here.</p>
+              </div>
+              <p className="subtle">${status || "Ready."}</p>
+            </div>
+          </div>
+        </${PageFrame}>
+      `;
+    }
+
+    function PaymentsPage() {
+      const [tab, setTab] = useState("paypal");
+      const [orders, setOrders] = useState([]);
+      const [payments, setPayments] = useState([]);
+      const [payouts, setPayouts] = useState([]);
+      const [status, setStatus] = useState("Loading dashboard...");
+
+      useEffect(() => {
+        let mounted = true;
+        (async () => {
+          try {
+            const [ordersData, paymentsData, payoutsData] = await Promise.all([
+              readJson("/api/orders/recent?limit=8").catch(() => null),
+              readJson("/api/payments/recent?limit=8").catch(() => null),
+              readJson("/api/payouts?limit=8").catch(() => null),
+            ]);
+            if (!mounted) return;
+            setOrders(Array.isArray(ordersData && ordersData.orders) ? ordersData.orders : []);
+            setPayments(Array.isArray(paymentsData && paymentsData.payments) ? paymentsData.payments : []);
+            setPayouts(Array.isArray(payoutsData && payoutsData.payouts) ? payoutsData.payouts : []);
+            setStatus("Payment dashboard loaded.");
+          } catch (error) {
+            if (mounted) setStatus(error.message);
+          }
+        })();
+        return () => { mounted = false; };
+      }, []);
+
+      const tabs = [
+        ["paypal", "PayPal"],
+        ["card", "Debit Card"],
+        ["cash", "Cash Till"],
+        ["cart", "Shop Cart"],
+      ];
+
+      const body = {
+        paypal: html`
+          <div className="grid grid-2">
+            <article className="pay-card">
+              <h3>PayPal desk</h3>
+              <p>Local checkout preview with the same order / payment backend available underneath.</p>
+            </article>
+            <article className="pay-card">
+              <h3>Capture flow</h3>
+              <p>Use the backend payment routes to create and confirm a payment from the current order context.</p>
+            </article>
+          </div>
+        `,
+        card: html`
+          <div className="grid grid-2">
+            <article className="pay-card">
+              <h3>Debit card payment</h3>
+              <p>The old page collected masked card and transfer details. The React shell keeps the same concept in one panel.</p>
+            </article>
+            <article className="pay-card">
+              <h3>Verification</h3>
+              <p>The backend supports local verification and payment status tracking; the UI now lives in this shared shell.</p>
+            </article>
+          </div>
+        `,
+        cash: html`
+          <div className="grid grid-2">
+            <article className="pay-card">
+              <h3>Cash till</h3>
+              <p>Collection overview, terminal status, payout requests, and recent order monitoring.</p>
+            </article>
+            <article className="pay-card">
+              <h3>Bank transfer</h3>
+              <p>Use the backend payout endpoints for requests and execution when the environment is configured.</p>
+            </article>
+          </div>
+        `,
+        cart: html`
+          <div className="grid grid-2">
+            <article className="pay-card">
+              <h3>Shop cart</h3>
+              <p>Cart summary and checkout flow collected into the same shell as the rest of the storefront.</p>
+            </article>
+            <article className="pay-card">
+              <h3>Payments accepted</h3>
+              <p>PayPal, cards, and crypto remain represented as checkout modes rather than separate HTML pages.</p>
+            </article>
+          </div>
+        `,
+      };
+
+      return html`
+        <${PageFrame}
+          title="PAYMENTS"
+          subtitle="PayPal, card, cash till, and cart views"
+          eyebrow="Checkout"
+          lede="The payment pages are now grouped into one reusable React view instead of four separate HTML documents."
+          media=${ASSETS.video.preview}
+        >
+          <div className="panel">
+            <div className="tabs">
+              ${tabs.map(([key, label]) => html`
+                <button key=${key} className=${`tab ${tab === key ? "active" : ""}`} onClick=${() => setTab(key)}>${label}</button>
+              `)}
+            </div>
+            ${body[tab]}
+          </div>
+
+          <div className="section split">
+            <div className="panel">
+              <div className="section-head">
+                <h2>Recent orders</h2>
+                <p>Data pulled from the existing Flask endpoints when available.</p>
+              </div>
+              <div className="stack">
+                ${orders.length ? orders.map((order) => html`
+                  <article key=${order.order_code || order.id} className="message-card">
+                    <div className="meta">${order.order_code || "Order"}</div>
+                    <p>${order.customer_email || "Unknown customer"} - ${order.status || "pending"}</p>
+                  </article>
+                `) : html`<div className="empty">No recent orders found.</div>`}
+              </div>
+            </div>
+            <div className="panel">
+              <div className="section-head">
+                <h2>Payments and payouts</h2>
+                <p>Status snapshot from the backend if the data exists.</p>
+              </div>
+              <div className="stack">
+                ${(payments.length ? payments : []).slice(0, 3).map((item, index) => html`
+                  <article key=${index} className="message-card">
+                    <div className="meta">${item.provider || item.method || "payment"}</div>
+                    <p>${item.status || "unknown"}${item.amount ? ` - ${item.amount}` : ""}</p>
+                  </article>
+                `)}
+                ${(payouts.length ? payouts : []).slice(0, 3).map((item, index) => html`
+                  <article key=${index} className="message-card">
+                    <div className="meta">Payout</div>
+                    <p>${item.destination_label || "bank transfer"} - ${item.status || "pending"}</p>
+                  </article>
+                `)}
+                {!payments.length && !payouts.length ? html`<div className="empty">No payment data available yet.</div>` : null}
+              </div>
+            </div>
+          </div>
+
+          <div className="section">
+            <div className="panel">
+              <div className="section-head">
+                <h2>Backend status</h2>
+                <p>Useful when you want to know whether the payment dashboard is talking to Flask.</p>
+              </div>
+              <p className="subtle">${status}</p>
+            </div>
+          </div>
+        </${PageFrame}>
+      `;
+    }
+
+    function PosterwallPage() {
+      const [sharedFiles, setSharedFiles] = useState([]);
+      useEffect(() => {
+        let mounted = true;
+        (async () => {
+          try {
+            const data = await readJson("/api/shared-files?limit=8");
+            if (mounted) setSharedFiles(Array.isArray(data.items) ? data.items : []);
+          } catch {
+            if (mounted) setSharedFiles([]);
+          }
+        })();
+        return () => { mounted = false; };
+      }, []);
+
+      const figures = [
+        { src: ASSETS.image.cyberpunk, caption: "Cyberpunk texture from the original asset set." },
+        { src: ASSETS.image.immageme, caption: "Secondary artwork used across the legacy pages." },
+      ];
+
+      return html`
+        <${PageFrame}
+          title="POSTERWALL"
+          subtitle="Vinyl collection and shared visuals"
+          eyebrow="Gallery"
+          lede="A visual wall for the material that used to live across separate poster and image pages."
+          media=${ASSETS.video.piano}
+        >
+          <div className="section">
+            <div className="section-head">
+              <h2>Featured visuals</h2>
+              <p>The old image assets remain available and now sit inside the React gallery.</p>
+            </div>
+            <div className="gallery">
+              ${figures.map((figure) => html`
+                <figure key=${figure.src}>
+                  <img src=${figure.src} alt="" />
+                  <figcaption>${figure.caption}</figcaption>
+                </figure>
+              `)}
+            </div>
+          </div>
+
+          <div className="section">
+            <div className="section-head">
+              <h2>Shared files</h2>
+              <p>Any uploaded poster images from the backend appear here as data URLs.</p>
+            </div>
+            <div className="grid grid-4">
+              ${sharedFiles.length ? sharedFiles.map((file) => html`
+                <article key=${file.id} className="grid-card">
+                  <h3>${file.file_name}</h3>
+                  <img src=${file.image_data} alt="" style=${{ width: "100%", borderRadius: "14px", marginTop: "8px", border: "1px solid rgba(125,252,255,0.14)" }} />
+                </article>
+              `) : html`<div className="empty" style=${{ gridColumn: "1 / -1" }}>No shared files yet. Upload an image from the backend.</div>`}
+            </div>
+          </div>
+        </${PageFrame}>
+      `;
+    }
+
+    function AudioMixerPage() {
+      const [recording, setRecording] = useState(false);
+      const [blobUrl, setBlobUrl] = useState("");
+      const [status, setStatus] = useState("Ready.");
+      const recorderRef = useRef(null);
+      const streamRef = useRef(null);
+      const chunksRef = useRef([]);
+
+      useEffect(() => () => {
+        if (blobUrl) URL.revokeObjectURL(blobUrl);
+      }, [blobUrl]);
+
+      const stopCapture = useCallback(() => {
+        const recorder = recorderRef.current;
+        if (recorder && recorder.state !== "inactive") recorder.stop();
+        const stream = streamRef.current;
+        if (stream) {
+          stream.getTracks().forEach((track) => track.stop());
+          streamRef.current = null;
+        }
+        setRecording(false);
+      }, []);
+
+      const startCapture = async () => {
+        try {
+          setStatus("Requesting audio capture permission...");
+          let stream = null;
+          if (navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) {
+            try {
+              stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+            } catch {
+              stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            }
+          } else if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          }
+          if (!stream) throw new Error("Audio capture is not available in this browser.");
+          chunksRef.current = [];
+          streamRef.current = stream;
+          const recorder = new MediaRecorder(stream);
+          recorderRef.current = recorder;
+          recorder.ondataavailable = (event) => {
+            if (event.data && event.data.size > 0) chunksRef.current.push(event.data);
+          };
+          recorder.onstop = () => {
+            const blob = new Blob(chunksRef.current, { type: recorder.mimeType || "audio/webm" });
+            if (blobUrl) URL.revokeObjectURL(blobUrl);
+            setBlobUrl(URL.createObjectURL(blob));
+            setStatus("Recording saved.");
+          };
+          recorder.start();
+          setRecording(true);
+          setStatus("Recording in progress.");
+        } catch (error) {
+          setStatus(error.message);
+        }
+      };
+
+      return html`
+        <${PageFrame}
+          title="SYSTEM AUDIO RECORDER"
+          subtitle="Browser audio capture"
+          eyebrow="Tools"
+          lede="The old recorder page becomes a simple capture panel. Browser permissions decide whether you get tab, system, or microphone audio."
+          media=${ASSETS.image.cyberpunk}
+        >
+          <div className="section split">
+            <div className="panel">
+              <div className="section-head">
+                <h2>Capture</h2>
+                <p>Start and stop recording from the browser. Some browsers will expose screen audio, others will fall back to the microphone.</p>
+              </div>
+              <div className="toolbar">
+                <button className="cta" onClick=${startCapture} disabled=${recording}>Start Recording</button>
+                <button className="ghost" onClick=${stopCapture} disabled=${!recording}>Stop Recording</button>
+              </div>
+              <p className="subtle">${status}</p>
+            </div>
+            <div className="panel">
+              <div className="section-head">
+                <h2>Preview</h2>
+                <p>The latest capture appears here as a downloadable clip.</p>
+              </div>
+              ${blobUrl ? html`
+                <>
+                  <audio className="audio-player" controls src=${blobUrl}></audio>
+                  <div className="hero-actions" style=${{ marginTop: "14px" }}>
+                    <a className="cta" href=${blobUrl} download="ghost-recorder.webm">Download Clip</a>
+                  </div>
+                </>
+              ` : html`<div className="empty">No recording yet.</div>`}
+            </div>
+          </div>
+        </${PageFrame}>
+      `;
+    }
+
+    function SubscribeForm() {
+      const [state, setState] = useState({ username: "", email: "", weighter: "react" });
+      const [status, setStatus] = useState("");
+      const submit = async (event) => {
+        event.preventDefault();
+        try {
+          const data = await readJson("/api/subscribe", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(state),
+          });
+          setStatus(data.message || "Subscription saved.");
+          setState({ name: "", email: "" });
+        } catch (error) {
+          setStatus(error.message);
+        }
+      };
+
+      return html`
+        <form className="form-grid" onSubmit=${submit}>
+          <div className="form-grid two">
+            <label className="field">
+              <span>Username</span>
+              <input value=${state.username} onInput=${(e) => setState((s) => ({ ...s, username: e.target.value }))} />
+            </label>
+            <label className="field">
+              <span>Email</span>
+              <input type="email" value=${state.email} onInput=${(e) => setState((s) => ({ ...s, email: e.target.value }))} />
+            </label>
+          </div>
+          <label className="field">
+            <span>Tag</span>
+            <input value=${state.weighter} onInput=${(e) => setState((s) => ({ ...s, weighter: e.target.value }))} />
+          </label>
+          <div className="toolbar">
+            <button className="cta" type="submit">Subscribe</button>
+            <span className="subtle">${status || "Enter a username and email."}</span>
+          </div>
+        </form>
+      `;
+    }
+
+    function ChatPanel({ currentUser, onUserChange, onOpenAuth }) {
+      const [quickLogin, setQuickLogin] = useState({ username: "", password: "" });
+      const [messages, setMessages] = useState([]);
+      const [message, setMessage] = useState("");
+      const [online, setOnline] = useState(0);
+      const [status, setStatus] = useState("");
+      const [isBusy, setIsBusy] = useState(false);
+      const lastIdRef = useRef(0);
+
+      const fetchMessages = useCallback(async () => {
+        try {
+          const data = await readJson(`/api/chat/messages?since_id=${lastIdRef.current}`);
+          const next = Array.isArray(data.messages) ? data.messages : [];
+          if (next.length) {
+            lastIdRef.current = Math.max(lastIdRef.current, ...next.map((item) => Number(item.id) || 0));
+            setMessages((current) => {
+              const seen = new Set(current.map((item) => item.id));
+              const merged = [...current];
+              next.forEach((item) => {
+                if (!seen.has(item.id)) merged.push(item);
+              });
+              return merged;
+            });
+          }
+        } catch (error) {
+          setStatus(error.message);
+        }
+      }, []);
+
+      const fetchOnline = useCallback(async () => {
+        try {
+          const data = await readJson("/api/chat/online");
+          setOnline(Number(data.online || 0));
+        } catch {
+          setOnline(0);
+        }
+      }, []);
+
+      useEffect(() => {
+        let mounted = true;
+        (async () => {
+          try {
+            const data = await readJson("/api/me");
+            if (!mounted) return;
+            onUserChange(data.user);
+          } catch {
+            if (mounted && currentUser) onUserChange(currentUser);
+          }
+        })();
+        return () => { mounted = false; };
+      }, []);
+
+      useEffect(() => {
+        if (!currentUser) return;
+        fetchMessages();
+        fetchOnline();
+        const timer = window.setInterval(() => {
+          fetchMessages();
+          fetchOnline();
+        }, 2500);
+        return () => window.clearInterval(timer);
+      }, [currentUser, fetchMessages, fetchOnline]);
+
+      const quickSubmit = async (event) => {
+        event.preventDefault();
+        setIsBusy(true);
+        try {
+          const data = await readJson("/api/chat-login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(quickLogin),
+          });
+          onUserChange(data.user);
+          setStatus("Chat session started.");
+          setQuickLogin({ username: "", password: "" });
+        } catch (error) {
+          setStatus(error.message);
+        } finally {
+          setIsBusy(false);
+        }
+      };
+
+      const sendMessage = async (event) => {
+        event.preventDefault();
+        if (!message.trim()) return;
+        setIsBusy(true);
+        try {
+          await readJson("/api/chat/messages", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message }),
+          });
+          setMessage("");
+          await fetchMessages();
+        } catch (error) {
+          setStatus(error.message);
+          if (/unauthorized/i.test(error.message)) onOpenAuth("login");
+        } finally {
+          setIsBusy(false);
+        }
+      };
+
+      return html`
+        <div className="stack">
+          ${currentUser ? html`
+            <div className="toolbar">
+              <span className="pill">Online ${online}</span>
+              <span className="pill alt">${currentUser.username || currentUser.email || "signed in"}</span>
+            </div>
+          ` : html`
+            <form className="form-grid" onSubmit=${quickSubmit}>
+              <div className="form-grid two">
+                <label className="field">
+                  <span>Username</span>
+                  <input value=${quickLogin.username} onInput=${(e) => setQuickLogin((s) => ({ ...s, username: e.target.value }))} />
+                </label>
+                <label className="field">
+                  <span>Password</span>
+                  <input type="password" value=${quickLogin.password} onInput=${(e) => setQuickLogin((s) => ({ ...s, password: e.target.value }))} />
+                </label>
+              </div>
+              <div className="toolbar">
+                <button className="cta" type="submit" disabled=${isBusy}>Quick chat login</button>
+                <button className="ghost" type="button" onClick=${() => onOpenAuth("login")}>Global auth</button>
+              </div>
+            </form>
+          `}
+
+          <div className="message-board">
+            ${messages.length ? messages.map((item) => html`
+              <article key=${item.id} className="message-card">
+                <div className="meta">${item.username} - ${fmtDate(item.timestamp)}</div>
+                <p>${item.message}</p>
+              </article>
+            `) : html`<div className="empty">No messages yet.</div>`}
+          </div>
+
+          <form className="form-grid" onSubmit=${sendMessage}>
+            <label className="field">
+              <span>Message</span>
+              <textarea value=${message} onInput=${(e) => setMessage(e.target.value)} placeholder=${currentUser ? "Write a message..." : "Sign in first"}></textarea>
+            </label>
+            <div className="toolbar">
+              <button className="cta" type="submit" disabled=${!currentUser || isBusy}>Send</button>
+              <span className="subtle">${status || "Messages refresh every few seconds."}</span>
+            </div>
+          </form>
+        </div>
+      `;
+    }
+
+    function AuthModal({ open, mode, onClose, onModeChange, onUserChange }) {
+      const [login, setLogin] = useState({ email: "", password: "" });
+      const [register, setRegister] = useState({ username: "", email: "", password: "" });
+      const [reset, setReset] = useState({ email: "" });
+      const [status, setStatus] = useState("");
+      const submitLogin = async (event) => {
+        event.preventDefault();
+        try {
+          const data = await readJson("/api/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(login),
+          });
+          onUserChange(data.user);
+          setStatus("Logged in.");
+          onClose();
+        } catch (error) {
+          setStatus(error.message);
+        }
+      };
+      const submitRegister = async (event) => {
+        event.preventDefault();
+        try {
+          const data = await readJson("/api/register", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ...register, role: "user" }),
+          });
+          if (data.user) onUserChange(data.user);
+          setStatus("Registered.");
+          onClose();
+        } catch (error) {
+          setStatus(error.message);
+        }
+      };
+      const submitReset = async (event) => {
+        event.preventDefault();
+        try {
+          const data = await readJson("/api/request-reset", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(reset),
+          });
+          setStatus(data.message || "Reset request sent.");
+        } catch (error) {
+          setStatus(error.message);
+        }
+      };
+
+      if (!open) return null;
+
+      return html`
+        <div className="modal-backdrop" onClick=${onClose}>
+          <div className="modal" onClick=${(e) => e.stopPropagation()}>
+            <div className="modal-head">
+              <div>
+                <h2>Authentication</h2>
+                <p className="subtle">Use the backend session for login, registration, and password reset.</p>
+              </div>
+              <button className="ghost" onClick=${onClose}>Close</button>
+            </div>
+            <div className="tabs">
+              ${[
+                ["login", "Login"],
+                ["register", "Register"],
+                ["reset", "Reset"],
+              ].map(([key, label]) => html`
+                <button key=${key} className=${`tab ${mode === key ? "active" : ""}`} onClick=${() => onModeChange(key)}>${label}</button>
+              `)}
+            </div>
+
+            ${mode === "login" ? html`
+              <form className="form-grid" onSubmit=${submitLogin}>
+                <div className="form-grid two">
+                  <label className="field">
+                    <span>Email</span>
+                    <input type="email" value=${login.email} onInput=${(e) => setLogin((s) => ({ ...s, email: e.target.value }))} />
+                  </label>
+                  <label className="field">
+                    <span>Password</span>
+                    <input type="password" value=${login.password} onInput=${(e) => setLogin((s) => ({ ...s, password: e.target.value }))} />
+                  </label>
+                </div>
+                <div className="toolbar">
+                  <button className="cta" type="submit">Login</button>
+                  <button className="ghost" type="button" onClick=${() => onModeChange("register")}>Need an account?</button>
+                </div>
+              </form>
+            ` : mode === "register" ? html`
+              <form className="form-grid" onSubmit=${submitRegister}>
+                <div className="form-grid two">
+                  <label className="field">
+                    <span>Username</span>
+                    <input value=${register.username} onInput=${(e) => setRegister((s) => ({ ...s, username: e.target.value }))} />
+                  </label>
+                  <label className="field">
+                    <span>Email</span>
+                    <input type="email" value=${register.email} onInput=${(e) => setRegister((s) => ({ ...s, email: e.target.value }))} />
+                  </label>
+                </div>
+                <label className="field">
+                  <span>Password</span>
+                  <input type="password" value=${register.password} onInput=${(e) => setRegister((s) => ({ ...s, password: e.target.value }))} />
+                </label>
+                <div className="toolbar">
+                  <button className="cta" type="submit">Register</button>
+                  <button className="ghost" type="button" onClick=${() => onModeChange("login")}>Already have an account?</button>
+                </div>
+              </form>
+            ` : html`
+              <form className="form-grid" onSubmit=${submitReset}>
+                <label className="field">
+                  <span>Email</span>
+                  <input type="email" value=${reset.email} onInput=${(e) => setReset({ email: e.target.value })} />
+                </label>
+                <div className="toolbar">
+                  <button className="cta" type="submit">Request reset</button>
+                  <button className="ghost" type="button" onClick=${() => onModeChange("login")}>Back to login</button>
+                </div>
+              </form>
+            `}
+
+            <p className="subtle" style=${{ marginTop: "14px" }}>${status || "Login, register, or request a reset from the same modal."}</p>
+          </div>
+        </div>
+      `;
+    }
+
+    function App() {
+      const [route, setRoute] = useState(resolveRoute(window.location.pathname));
+      const [authOpen, setAuthOpen] = useState(false);
+      const [authMode, setAuthMode] = useState("login");
+      const [currentUser, setCurrentUser] = useState(null);
+
+      useEffect(() => {
+        const onPopState = () => setRoute(resolveRoute(window.location.pathname));
+        window.addEventListener("popstate", onPopState);
+        return () => window.removeEventListener("popstate", onPopState);
+      }, []);
+
+      useEffect(() => {
+        (async () => {
+          try {
+            const data = await readJson("/api/me");
+            setCurrentUser(data.user || null);
+          } catch {
+            setCurrentUser(null);
+          }
+        })();
+      }, []);
+
+      useEffect(() => {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }, [route]);
+
+      const onNavigate = useCallback((path) => {
+        const clean = sanitizePathname(path);
+        if (window.location.pathname !== clean) {
+          window.history.pushState({}, "", clean);
+        }
+        setRoute(resolveRoute(clean));
+      }, []);
+
+      const onOpenAuth = useCallback((mode = "login") => {
+        setAuthMode(mode);
+        setAuthOpen(true);
+      }, []);
+
+      const onLogout = useCallback(async () => {
+        try {
+          await fetch("/logout", { credentials: "include" });
+        } catch {
+          // ignore
+        }
+        setCurrentUser(null);
+        setRoute(resolveRoute(window.location.pathname));
+      }, []);
+
+      const background = route === "contact"
+        ? ASSETS.video.car
+        : route === "posterwall"
+          ? ASSETS.video.piano
+          : ASSETS.video.preview;
+
+      return html`
+        <div className="shell">
+          <div className="bg-media">
+            <video src=${background} autoPlay muted loop playsInline></video>
+          </div>
+          <${TopBar}
+            route=${route}
+            onNavigate=${onNavigate}
+            currentUser=${currentUser}
+            onOpenAuth=${onOpenAuth}
+            onLogout=${onLogout}
+          />
+          <main>
+            ${route === "home" ? html`<${HomePage} onNavigate=${onNavigate} onOpenAuth=${onOpenAuth} currentUser=${currentUser} />`
+              : route === "chat" ? html`<${RootChatPage} onNavigate=${onNavigate} onOpenAuth=${onOpenAuth} currentUser=${currentUser} onUserChange=${setCurrentUser} />`
+              : route === "room" ? html`<${RoomPage} onNavigate=${onNavigate} onOpenAuth=${onOpenAuth} currentUser=${currentUser} onUserChange=${setCurrentUser} />`
+              : route === "shop" ? html`<${ShopPage} />`
+              : route === "tracklist" ? html`<${TrackPage} />`
+              : route === "contact" ? html`<${ContactPage} currentUser=${currentUser} onOpenAuth=${onOpenAuth} />`
+              : route === "posterwall" ? html`<${PosterwallPage} />`
+              : route === "payments" ? html`<${PaymentsPage} />`
+              : route === "audioMixer" ? html`<${AudioMixerPage} />`
+              : html`<${ArticlePage} page=${ARTICLE_PAGES[route]} route=${route} onNavigate=${onNavigate} />`
+            }
+          </main>
+          <div className="footer">CYBERGHOST - ${routeLabel(route)} - React shell</div>
+          <${AuthModal}
+            open=${authOpen}
+            mode=${authMode}
+            onClose=${() => setAuthOpen(false)}
+            onModeChange=${setAuthMode}
+            onUserChange=${setCurrentUser}
+          />
+        </div>
+      `;
+    }
+
+    createRoot(document.getElementById("root")).render(html`<${App} />`);
+  </script>
+</body>
+</html>

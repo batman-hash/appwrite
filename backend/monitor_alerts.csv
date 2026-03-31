@@ -1,0 +1,14 @@
+detected_at,reason,risk_level,intent_signal,ip_address,mac_address,hostname,status,details
+2026-03-12 18:16:04,burst_of_unknown_devices,medium,burst_of_unknown_devices,172.25.231.189,00:15:5d:c7:05:3f,172.25.231.189,review,Several new unknown/review devices appeared in one scan window.
+2026-03-12 18:16:04,burst_of_unknown_devices,medium,burst_of_unknown_devices,192.168.1.51,b2:5e:89:88:c6:a1,192.168.1.51,review,Several new unknown/review devices appeared in one scan window.
+2026-03-12 18:16:04,burst_of_unknown_devices,medium,burst_of_unknown_devices,192.168.1.68,be:c8:21:5d:b7:15,192.168.1.68,review,Several new unknown/review devices appeared in one scan window.
+2026-03-12 18:16:04,burst_of_unknown_devices,medium,burst_of_unknown_devices,192.168.1.254,e4:4e:12:7e:32:2b,192.168.1.254,review,Several new unknown/review devices appeared in one scan window.
+2026-03-12 18:16:04,burst_of_unknown_devices,medium,burst_of_unknown_devices,224.0.0.22,01:00:5e:00:00:16,igmp.mcast.net,review,Several new unknown/review devices appeared in one scan window.
+2026-03-12 18:16:04,burst_of_unknown_devices,medium,burst_of_unknown_devices,224.0.0.251,01:00:5e:00:00:fb,mdns.mcast.net,review,Several new unknown/review devices appeared in one scan window.
+2026-03-12 18:16:04,burst_of_unknown_devices,medium,burst_of_unknown_devices,224.0.0.252,01:00:5e:00:00:fc,,review,Several new unknown/review devices appeared in one scan window.
+2026-03-12 18:16:04,burst_of_unknown_devices,medium,burst_of_unknown_devices,239.255.255.250,01:00:5e:7f:ff:fa,,review,Several new unknown/review devices appeared in one scan window.
+2026-03-12 18:16:04,burst_of_unknown_devices,medium,burst_of_unknown_devices,255.255.255.255,ff:ff:ff:ff:ff:ff,,review,Several new unknown/review devices appeared in one scan window.
+2026-03-12 18:35:27,persistent_unknown_device,low,persistent_unknown_device,192.168.1.254,e4:4e:12:7e:32:2b,192.168.1.254,review,Unknown MAC e4:4e:12:7e:32:2b is still present on 192.168.1.254.
+2026-03-12 18:35:27,persistent_unknown_device,low,persistent_unknown_device,255.255.255.255,ff:ff:ff:ff:ff:ff,,review,Unknown MAC ff:ff:ff:ff:ff:ff is still present on 255.255.255.255.
+2026-03-12 18:40:13,persistent_unknown_device,low,persistent_unknown_device,192.168.1.68,be:c8:21:5d:b7:15,192.168.1.68,review,Unknown MAC be:c8:21:5d:b7:15 is still present on 192.168.1.68.
+2026-03-12 18:41:05,persistent_unknown_device,low,persistent_unknown_device,192.168.1.51,b2:5e:89:88:c6:a1,192.168.1.51,review,Unknown MAC b2:5e:89:88:c6:a1 is still present on 192.168.1.51.

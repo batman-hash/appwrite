@@ -1,0 +1,11 @@
+# Review-only notes for OpenWrt
+# These are NOT auto-applied.
+# You can translate approved/denied MACs into router UI or firewall rules manually.
+
+# REVIEW mac=00:15:5d:c7:05:3f ip=172.25.231.189 hostname=172.25.231.189
+# REVIEW mac=e4:4e:12:7e:32:2b ip=192.168.1.254 hostname=192.168.1.254
+# REVIEW mac=01:00:5e:00:00:16 ip=224.0.0.22 hostname=igmp.mcast.net
+# REVIEW mac=01:00:5e:00:00:fb ip=224.0.0.251 hostname=mdns.mcast.net
+# REVIEW mac=01:00:5e:00:00:fc ip=224.0.0.252 hostname=
+# REVIEW mac=01:00:5e:7f:ff:fa ip=239.255.255.250 hostname=
+# REVIEW mac=ff:ff:ff:ff:ff:ff ip=255.255.255.255 hostname=

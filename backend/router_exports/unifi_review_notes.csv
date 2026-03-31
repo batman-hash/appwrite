@@ -1,0 +1,8 @@
+mac_address,ip_address,hostname,note
+00:15:5d:c7:05:3f,172.25.231.189,172.25.231.189,Needs manual review
+e4:4e:12:7e:32:2b,192.168.1.254,192.168.1.254,Needs manual review
+01:00:5e:00:00:16,224.0.0.22,igmp.mcast.net,Needs manual review
+01:00:5e:00:00:fb,224.0.0.251,mdns.mcast.net,Needs manual review
+01:00:5e:00:00:fc,224.0.0.252,,Needs manual review
+01:00:5e:7f:ff:fa,239.255.255.250,,Needs manual review
+ff:ff:ff:ff:ff:ff,255.255.255.255,,Needs manual review

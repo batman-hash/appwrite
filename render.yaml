@@ -1,0 +1,33 @@
+services:
+  - type: web
+    name: cyberghost-webapp
+    env: python
+    region: frankfurt
+    buildCommand: pip install -r requirements.txt && pip install gunicorn
+    startCommand: gunicorn backend.webapp:app --bind 0.0.0.0:$PORT --workers 2
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11
+      - key: FLASK_ENV
+        value: production
+      - key: DEBUG
+        value: false
+      - key: PORT
+        value: 8000
+      - key: DATA_DIR
+        value: /app/data
+      - key: STATIC_BASE_URL
+        value: https://cyberghost-webapp.onrender.com
+      - key: PUBLIC_BASE_URL
+        value: https://cyberghost-webapp.onrender.com
+      - key: CORS_ORIGINS
+        value: https://cyberghost-webapp.onrender.com
+      - key: REQUEST_OBS_ENABLED
+        value: false
+      - key: LOCAL_DEVICE_ONLY
+        value: false
+    disks:
+      - name: data
+        mountPath: /app/data
+        size: 1GB
+    autoDeploy: true

@@ -1,0 +1,10 @@
+{
+  "name": "appwrite-root-app",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "postinstall": "npm install --prefix backend/backend",
+    "start": "npm --prefix backend/backend start",
+    "dev": "npm --prefix backend/backend start"
+  }
+}
