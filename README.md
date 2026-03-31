@@ -38,7 +38,8 @@ The goal of this project is to create a central hub where music creators can dis
 - `kernel/linux_kernel_bridge.c` is the kernel-space companion to the user-space Python bridge.
 - It exposes a `/dev/linux_kernel_bridge` character device and `/proc/linux_kernel_bridge` status output.
 - The module supports `read`, `write`, `llseek`, and `ioctl` so user space can talk to it through a normal file descriptor.
-- Build it from `kernel/` with `make`, then load it with `sudo insmod linux_kernel_bridge.ko`.
+- Build it from `kernel/` with `make`, then load it with `sudo insmod linux_kernel_bridge.ko allowed_uid=$(id -u)`.
+- The module enforces access in kernel space so only that UID can use the device and proc entry.
 
 ## ⚛️ React Frontend
 

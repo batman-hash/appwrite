@@ -31,9 +31,13 @@ That uses the installed kernel headers for the running kernel:
 ## Load and unload
 
 ```bash
-sudo insmod linux_kernel_bridge.ko
+sudo insmod linux_kernel_bridge.ko allowed_uid=$(id -u)
 sudo rmmod linux_kernel_bridge
 ```
+
+If you want to hard-code a different user, pass that numeric UID instead of `$(id -u)`.
+The device node is created with open filesystem permissions, but the module itself
+rejects any `open`, `read`, `write`, `llseek`, or `ioctl` call from a different UID.
 
 ## IOCTLs
 

@@ -16,6 +16,7 @@
  */
 
 #include <linux/fs.h>
+#include <linux/cred.h>
 #include <linux/miscdevice.h>
 #include <linux/mutex.h>
 #include <linux/module.h>
@@ -23,6 +24,8 @@
 #include <linux/seq_file.h>
 #include <linux/slab.h>
 #include <linux/uaccess.h>
+#include <linux/uidgid.h>
+#include <linux/user_namespace.h>
 #include <linux/version.h>
 
 #include "linux_kernel_bridge.h"
@@ -38,13 +41,35 @@ struct lkbridge_device {
 };
 
 static struct lkbridge_device g_dev;
+static int allowed_uid = -1;
+
+module_param(allowed_uid, int, 0644);
+MODULE_PARM_DESC(allowed_uid, "UID allowed to access /dev/linux_kernel_bridge and /proc/linux_kernel_bridge");
 
 static int lkbridge_proc_show(struct seq_file *m, void *v);
 static void lkbridge_reset_locked(void);
 
+static int lkbridge_current_uid(void)
+{
+	return (int)from_kuid(&init_user_ns, current_uid());
+}
+
+static bool lkbridge_uid_allowed(void)
+{
+	return allowed_uid >= 0 && lkbridge_current_uid() == allowed_uid;
+}
+
+static int lkbridge_require_allowed(void)
+{
+	return lkbridge_uid_allowed() ? 0 : -EACCES;
+}
+
 static int lkbridge_open(struct inode *inode, struct file *file)
 {
 	(void)inode;
+
+	if (lkbridge_require_allowed())
+		return -EACCES;
 
 	mutex_lock(&g_dev.lock);
 	g_dev.stats.opens++;
@@ -71,6 +96,9 @@ static ssize_t lkbridge_read(struct file *file, char __user *buf, size_t count, 
 	size_t to_copy;
 
 	(void)file;
+
+	if (lkbridge_require_allowed())
+		return -EACCES;
 
 	if (!count)
 		return 0;
@@ -108,6 +136,9 @@ static ssize_t lkbridge_write(struct file *file, const char __user *buf, size_t 
 	size_t to_copy;
 
 	(void)file;
+
+	if (lkbridge_require_allowed())
+		return -EACCES;
 
 	if (!count)
 		return 0;
@@ -147,6 +178,9 @@ static loff_t lkbridge_llseek(struct file *file, loff_t offset, int whence)
 	loff_t limit;
 	loff_t current;
 
+	if (lkbridge_require_allowed())
+		return -EACCES;
+
 	if (mutex_lock_interruptible(&g_dev.lock))
 		return -ERESTARTSYS;
 
@@ -184,6 +218,9 @@ static long lkbridge_ioctl(struct file *file, unsigned int cmd, unsigned long ar
 	__u32 capacity_snapshot;
 
 	(void)file;
+
+	if (lkbridge_require_allowed())
+		return -EACCES;
 
 	switch (cmd) {
 	case LKBRIDGE_IOCTL_GET_STATS:
@@ -237,7 +274,7 @@ static struct miscdevice lkbridge_miscdev = {
 	.minor = MISC_DYNAMIC_MINOR,
 	.name = LKBRIDGE_DEVICE_NAME,
 	.fops = &lkbridge_fops,
-	.mode = 0660,
+	.mode = 0666,
 };
 
 static void lkbridge_reset_locked(void)
@@ -250,6 +287,9 @@ static void lkbridge_reset_locked(void)
 static int lkbridge_proc_open(struct inode *inode, struct file *file)
 {
 	(void)inode;
+
+	if (lkbridge_require_allowed())
+		return -EACCES;
 
 	return single_open(file, lkbridge_proc_show, NULL);
 }
@@ -273,11 +313,11 @@ static const struct file_operations lkbridge_proc_ops = {
 
 static int lkbridge_proc_show(struct seq_file *m, void *v)
 {
-	(void)v;
-
 	struct lkbridge_stats stats;
 	size_t used;
 	size_t capacity;
+
+	(void)v;
 
 	if (mutex_lock_interruptible(&g_dev.lock))
 		return -ERESTARTSYS;
@@ -288,6 +328,7 @@ static int lkbridge_proc_show(struct seq_file *m, void *v)
 	mutex_unlock(&g_dev.lock);
 
 	seq_puts(m, "linux_kernel_bridge\n");
+	seq_printf(m, "allowed_uid: %d\n", allowed_uid);
 	seq_printf(m, "device: /dev/%s\n", LKBRIDGE_DEVICE_NAME);
 	seq_printf(m, "proc: /proc/%s\n", LKBRIDGE_PROC_NAME);
 	seq_printf(m, "buffer_used: %zu\n", used);
@@ -308,6 +349,10 @@ static int __init lkbridge_init(void)
 
 	memset(&g_dev, 0, sizeof(g_dev));
 	mutex_init(&g_dev.lock);
+	if (allowed_uid < 0)
+		allowed_uid = lkbridge_current_uid();
+	if (allowed_uid < 0)
+		return -EINVAL;
 	g_dev.capacity = LKBRIDGE_BUFFER_CAPACITY;
 	g_dev.buffer = kzalloc(g_dev.capacity, GFP_KERNEL);
 	if (!g_dev.buffer)
@@ -326,6 +371,7 @@ static int __init lkbridge_init(void)
 
 	pr_info("linux_kernel_bridge loaded: /dev/%s and /proc/%s\n",
 		LKBRIDGE_DEVICE_NAME, LKBRIDGE_PROC_NAME);
+	pr_info("linux_kernel_bridge access restricted to uid %d\n", allowed_uid);
 	return 0;
 
 err_misc:
