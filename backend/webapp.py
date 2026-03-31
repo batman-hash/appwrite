@@ -13,8 +13,12 @@ from flask import Flask, render_template, jsonify, request, send_from_directory
 from flask_cors import CORS
 from flask_debugtoolbar import DebugToolbarExtension
 
-# Add parent directory to path to import render_network_toolkit
-sys.path.insert(0, str(Path(__file__).parent.parent))
+# Add both the appwrite directory and the repo root so the runtime can import
+# the shared toolkit modules that live alongside this app.
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+REPO_ROOT = PROJECT_ROOT.parent
+sys.path.insert(0, str(REPO_ROOT))
+sys.path.insert(0, str(PROJECT_ROOT))
 
 from render_network_toolkit import NetworkToolkit
 
@@ -29,7 +33,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_SSL_CERT_FILE = PROJECT_ROOT / 'certs' / 'server.crt'
 DEFAULT_SSL_KEY_FILE = PROJECT_ROOT / 'certs' / 'server.key'
 
@@ -68,10 +71,12 @@ def _get_ssl_context() -> tuple[str, str] | None:
 
     return None
 
+FRONTEND_DIR = PROJECT_ROOT / 'frontend'
+
 # Initialize Flask app
 app = Flask(__name__, 
-            static_folder='../frontend',
-            template_folder='../frontend')
+            static_folder=str(FRONTEND_DIR),
+            template_folder=str(FRONTEND_DIR))
 
 # Load configuration from environment
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
@@ -90,12 +95,12 @@ toolkit = NetworkToolkit()
 @app.route('/')
 def index():
     """Serve the main index page"""
-    return send_from_directory('../frontend', 'index.html')
+    return send_from_directory(str(FRONTEND_DIR), 'index.html')
 
 @app.route('/<path:filename>')
 def serve_static(filename):
     """Serve static files from frontend directory"""
-    return send_from_directory('../frontend', filename)
+    return send_from_directory(str(FRONTEND_DIR), filename)
 
 @app.route('/api/health')
 def health_check():
