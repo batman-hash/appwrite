@@ -4,7 +4,7 @@ import bcrypt
 from tkinter import messagebox
 import os
 import uuid
-from app_locks import acquire_process_locks
+from kernel.bridge.app_locks import acquire_process_locks
 
 # =========================
 # DATABASE PATH (DEFINE FIRST)

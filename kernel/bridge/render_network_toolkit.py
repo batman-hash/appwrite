@@ -414,13 +414,9 @@ class NetworkToolkit:
         Args:
             target_ip: Target IP to monitor
             target_size_mb: Target size in MB
-            duration: Monitoring duration in seconds. Use 0 to run until interrupted.
+            duration: Monitoring duration in seconds
         """
-        continuous = duration <= 0
-        if continuous:
-            logger.info("Starting connection monitoring until interrupted...")
-        else:
-            logger.info(f"Starting connection monitoring for {duration} seconds...")
+        logger.info(f"Starting connection monitoring for {duration} seconds...")
         logger.info(f"Target: {target_ip}, Size: {target_size_mb} MB")
         
         self.is_monitoring = True
@@ -435,7 +431,7 @@ class NetworkToolkit:
         target_size_bytes = target_size_mb * 1024 * 1024
         
         try:
-            while self.is_monitoring and (continuous or time.time() - start_time < duration):
+            while time.time() - start_time < duration and self.is_monitoring:
                 # Send probe packet
                 success = self._send_probe_packet(target_ip, size=1024)
                 
@@ -449,7 +445,7 @@ class NetworkToolkit:
                     )
                 
                 # Check if we've reached target size
-                if not continuous and self.connection_stats.bytes_sent >= target_size_bytes:
+                if self.connection_stats.bytes_sent >= target_size_bytes:
                     logger.info(f"Target size of {target_size_mb} MB reached!")
                     break
                 
@@ -472,8 +468,6 @@ class NetworkToolkit:
         logger.info(f"Loss percentage: {self.connection_stats.loss_percentage:.2f}%")
         logger.info(f"Target size: {target_size_mb} MB")
         logger.info(f"Actual size sent: {self.connection_stats.current_size_mb:.2f} MB")
-        if continuous:
-            logger.info("Continuous mode ended by interrupt or stop signal")
         logger.info("=" * 50)
         
         return asdict(self.connection_stats)
@@ -682,56 +676,12 @@ class NetworkToolkit:
             logger.error(f"Error loading devices: {e}")
             return False
 
-    def get_linux_kernel_info(self) -> Dict[str, str]:
-        """
-        Read a small set of Linux kernel details through the bridge helper.
-
-        This keeps the low-level bridge isolated in its own module while making
-        it available from the main toolkit CLI.
-        """
-        try:
-            from linux_kernel_bridge import (
-                getpid_via_syscall,
-                gettid_via_syscall,
-                getuid_via_syscall,
-                read_file,
-                read_from_procfs,
-                require_linux,
-            )
-        except Exception as exc:
-            logger.error(f"Linux kernel bridge is unavailable: {exc}")
-            return {}
-
-        try:
-            require_linux()
-        except Exception as exc:
-            logger.error(f"Linux kernel info is only available on Linux: {exc}")
-            return {}
-
-        hostname = "Unknown"
-        for candidate in ("/proc/sys/kernel/hostname", "/etc/hostname"):
-            try:
-                hostname = read_file(candidate).decode("utf-8", errors="replace").strip()
-                if hostname:
-                    break
-            except Exception:
-                continue
-
-        return {
-            "kernel_release": read_from_procfs("/proc/sys/kernel/osrelease"),
-            "kernel_version": read_from_procfs("/proc/version"),
-            "hostname": hostname,
-            "pid_via_syscall": str(getpid_via_syscall()),
-            "uid_via_syscall": str(getuid_via_syscall()),
-            "tid_via_syscall": str(gettid_via_syscall()),
-        }
-
     def boost_current_process_priority(self, target_nice: int = -20):
         """
         Try to raise the priority of the current toolkit process on Linux.
 
-        The OS may cap how far this can go for a non-root user, so this is
-        best-effort rather than a guarantee.
+        This is best-effort so the toolkit can run safely on ordinary user
+        accounts without forcing the boost on every invocation.
         """
         try:
             from linux_kernel_bridge import boost_current_process_priority as _boost
@@ -747,14 +697,15 @@ class NetworkToolkit:
             return None
 
         result = _boost(target_nice=target_nice)
-        if result.realtime:
+        if getattr(result, "realtime", False):
             logger.info(
                 f"Current process is running with {result.scheduler} priority {result.scheduler_priority}"
             )
         else:
             logger.warning(
                 "Full realtime priority was not granted; "
-                f"scheduler={result.scheduler}, nice={result.nice_level}. {result.message}"
+                f"scheduler={getattr(result, 'scheduler', 'unknown')}, "
+                f"nice={getattr(result, 'nice_level', 'unknown')}. {getattr(result, 'message', '')}"
             )
         return result
 
@@ -767,23 +718,13 @@ def main(argv: Optional[List[str]] = None):
     parser.add_argument('--scan-ports', help='Scan ports on specific IP')
     parser.add_argument('--monitor', help='Monitor connection to target IP')
     parser.add_argument('--monitor-size', type=int, default=3, help='Target size in MB for monitoring')
-    parser.add_argument('--monitor-duration', type=int, default=60, help='Monitoring duration in seconds (0 runs until interrupted)')
+    parser.add_argument('--monitor-duration', type=int, default=60, help='Monitoring duration in seconds')
     parser.add_argument('--firewall', action='store_true', help='Setup firewall rules')
     parser.add_argument('--info', action='store_true', help='Show network information')
-    parser.add_argument('--kernel-info', action='store_true', help='Show Linux kernel bridge information')
     parser.add_argument('--save', help='Save devices to JSON file')
     parser.add_argument('--load', help='Load devices from JSON file')
-    parser.add_argument(
-        '--boost-priority',
-        action='store_true',
-        help='Raise the current process priority before running a task',
-    )
-    parser.add_argument(
-        '--target-nice',
-        type=int,
-        default=-20,
-        help='Target nice level used with --boost-priority',
-    )
+    parser.add_argument('--boost-priority', action='store_true', help='Raise the current process priority before running a task')
+    parser.add_argument('--target-nice', type=int, default=-20, help='Target nice level used with --boost-priority')
     
     args = parser.parse_args(argv)
     
@@ -801,18 +742,7 @@ def main(argv: Optional[List[str]] = None):
             print(f"{key}: {value}")
         print("=" * 50)
         return
-
-    # Show Linux kernel information
-    if args.kernel_info:
-        info = toolkit.get_linux_kernel_info()
-        if info:
-            print("\nLinux Kernel Information:")
-            print("=" * 50)
-            for key, value in info.items():
-                print(f"{key}: {value}")
-            print("=" * 50)
-        return
-
+    
     # Scan network
     if args.scan:
         devices = toolkit.scan_network(method=args.scan)

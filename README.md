@@ -32,14 +32,18 @@ The goal of this project is to create a central hub where music creators can dis
 - It sends data in chunks with ACK/NACK retries and SHA-256 verification so the client only accepts matching bytes.
 - Server TLS keys stay on the server. If you want mutual TLS, give the client its own cert/key pair and keep that private key on the client side.
 - `probe-loss` uses Scapy when available and falls back to `ping` so you can inspect link loss before transfer.
+- `server --loopback-monitor` can capture localhost TLS socket traffic on `lo` and keep encrypted payload bytes from the connection for inspection.
+- The server/client path now uses sequential reads, larger socket buffers, and TCP_NODELAY to reduce per-chunk overhead on the CPU side.
 
 ## 🧠 Kernel-Space Bridge
 
 - `kernel/linux_kernel_bridge.c` is the kernel-space companion to the user-space Python bridge.
 - It exposes a `/dev/linux_kernel_bridge` character device and `/proc/linux_kernel_bridge` status output.
 - The module supports `read`, `write`, `llseek`, and `ioctl` so user space can talk to it through a normal file descriptor.
-- Build it from `kernel/` with `make`, then load it with `kernel/load_current_user.sh`.
+- Build it from `kernel/` with `make`, then load it with `../build.sh kernel-load-current-user`.
 - The module enforces access in kernel space so only that UID can use the device and proc entry.
+- The kernel buffer size is tunable with `buffer_capacity`, so you can load a smaller payload when you want less kernel memory and copy overhead.
+- The Python helper also has a `--monitor` mode that scans accessible `/proc/<pid>/maps` entries and reports each process's main executable base address, and it can optionally raise its own scheduling priority with `--boost-priority` when you need it.
 
 ## ⚛️ React Frontend
 

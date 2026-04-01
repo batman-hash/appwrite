@@ -144,7 +144,7 @@
       "type": "shell",
       "command": "python3",
       "args": [
-        "devnavigator.py",
+        "kernel/bridge/devnavigator.py",
         "list-search-emails",
         "--db-path",
         "./database/internet_search.db",
@@ -185,7 +185,7 @@
       "type": "shell",
       "command": "python3",
       "args": [
-        "devnavigator.py",
+        "kernel/bridge/devnavigator.py",
         "extract-emails",
         "--file",
         "${input:extractFile}",
@@ -210,7 +210,8 @@
       "type": "shell",
       "command": "bash",
       "args": [
-        "${workspaceFolder}/build.sh"
+        "${workspaceFolder}/../build.sh",
+        "build"
       ],
       "options": {
         "cwd": "${workspaceFolder}"

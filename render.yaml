@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: cyberghost-webapp
+    name: appwrite
     env: python
     region: frankfurt
     buildCommand: pip install -r requirements.txt && pip install gunicorn
@@ -17,11 +17,11 @@ services:
       - key: DATA_DIR
         value: /app/data
       - key: STATIC_BASE_URL
-        value: https://cyberghost-webapp.onrender.com
+        value: https://appwrite.onrender.com
       - key: PUBLIC_BASE_URL
-        value: https://cyberghost-webapp.onrender.com
+        value: https://appwrite.onrender.com
       - key: CORS_ORIGINS
-        value: https://cyberghost-webapp.onrender.com
+        value: https://appwrite.onrender.com
       - key: REQUEST_OBS_ENABLED
         value: false
       - key: LOCAL_DEVICE_ONLY

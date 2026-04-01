@@ -7,7 +7,7 @@
 
 #define LKBRIDGE_DEVICE_NAME "linux_kernel_bridge"
 #define LKBRIDGE_PROC_NAME "linux_kernel_bridge"
-#define LKBRIDGE_BUFFER_CAPACITY 4096
+#define LKBRIDGE_BUFFER_CAPACITY 1024
 #define LKBRIDGE_MAGIC 'k'
 
 struct lkbridge_stats {

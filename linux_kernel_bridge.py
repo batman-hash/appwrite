@@ -14,10 +14,12 @@ Important:
 
 from __future__ import annotations
 
+import argparse
 import ctypes
 import ctypes.util
 import errno
 import os
+import time
 from dataclasses import dataclass
 from typing import Optional, Union, Iterable
 
@@ -159,6 +161,22 @@ class PriorityBoostResult:
     scheduler_priority: int
     nice_level: int
     message: str = ""
+
+
+@dataclass(frozen=True)
+class ProcessMapEntry:
+    start: int
+    end: int
+    offset: int
+    pathname: str
+
+
+@dataclass(frozen=True)
+class ProcessBaseAddress:
+    pid: int
+    comm: str
+    exe_path: Optional[str]
+    base_address: Optional[int]
 
 
 # ---------------------------------------------------------------------------
@@ -375,6 +393,157 @@ def write_to_sysfs(path: str, value: str) -> int:
 
 
 # ---------------------------------------------------------------------------
+# Process monitoring helpers
+# ---------------------------------------------------------------------------
+
+def _normalize_proc_path(path: str) -> str:
+    cleaned = (path or "").strip()
+    if not cleaned or cleaned.startswith("["):
+        return ""
+    if cleaned.endswith(" (deleted)"):
+        cleaned = cleaned[:-10]
+    return os.path.realpath(cleaned)
+
+
+def _parse_proc_maps_line(line: str) -> Optional[ProcessMapEntry]:
+    stripped = line.strip()
+    if not stripped:
+        return None
+
+    parts = stripped.split(None, 5)
+    if len(parts) < 5:
+        return None
+
+    address_range, _perms, offset_str, _dev, _inode = parts[:5]
+    pathname = parts[5] if len(parts) == 6 else ""
+
+    try:
+        start_str, end_str = address_range.split("-", 1)
+        return ProcessMapEntry(
+            start=int(start_str, 16),
+            end=int(end_str, 16),
+            offset=int(offset_str, 16),
+            pathname=pathname,
+        )
+    except ValueError:
+        return None
+
+
+def _main_executable_base_from_maps_text(maps_text: str, exe_path: Optional[str] = None) -> Optional[int]:
+    normalized_exe = _normalize_proc_path(exe_path) if exe_path else ""
+    fallback = None
+
+    for raw_line in maps_text.splitlines():
+        entry = _parse_proc_maps_line(raw_line)
+        if entry is None or entry.offset != 0:
+            continue
+
+        normalized_path = _normalize_proc_path(entry.pathname)
+        if normalized_exe and normalized_path and normalized_path == normalized_exe:
+            return entry.start
+
+        if fallback is None and normalized_path:
+            fallback = entry.start
+
+    return fallback
+
+
+def get_process_main_base_address(pid: int, proc_root: str = "/proc") -> Optional[int]:
+    if pid < 0:
+        raise ValueError("pid must be >= 0")
+
+    maps_path = os.path.join(proc_root, str(pid), "maps")
+    exe_link = os.path.join(proc_root, str(pid), "exe")
+
+    exe_path = None
+    try:
+        exe_path = os.readlink(exe_link)
+    except OSError:
+        exe_path = None
+
+    try:
+        maps_text = read_file(maps_path).decode("utf-8", errors="replace")
+    except OSError:
+        return None
+
+    return _main_executable_base_from_maps_text(maps_text, exe_path)
+
+
+def list_process_base_addresses(proc_root: str = "/proc") -> list[ProcessBaseAddress]:
+    entries = []
+
+    try:
+        proc_names = sorted((name for name in os.listdir(proc_root) if name.isdigit()), key=int)
+    except OSError:
+        return entries
+
+    for name in proc_names:
+        pid = int(name)
+        comm = f"pid-{pid}"
+        try:
+            comm = read_from_procfs(os.path.join(proc_root, name, "comm")).strip() or comm
+        except Exception:
+            pass
+
+        exe_path = None
+        try:
+            exe_path = os.readlink(os.path.join(proc_root, name, "exe"))
+        except OSError:
+            exe_path = None
+
+        entries.append(
+            ProcessBaseAddress(
+                pid=pid,
+                comm=comm,
+                exe_path=exe_path,
+                base_address=get_process_main_base_address(pid, proc_root),
+            )
+        )
+
+    return entries
+
+
+def format_process_base_snapshot(entries: Iterable[ProcessBaseAddress]) -> str:
+    rows = list(entries)
+    lines = [
+        f"{'PID':>7} {'BASE':>18} {'COMM':<24} EXE",
+        f"{'---':>7} {'----':>18} {'----':<24} ---",
+    ]
+
+    for entry in rows:
+        base = f"0x{entry.base_address:x}" if entry.base_address is not None else "n/a"
+        exe = entry.exe_path or ""
+        comm = entry.comm[:24]
+        lines.append(f"{entry.pid:>7} {base:>18} {comm:<24} {exe}")
+
+    lines.append(f"processes: {len(rows)}")
+    return "\n".join(lines)
+
+
+def monitor_process_base_addresses(interval: float = 1.0, proc_root: str = "/proc", once: bool = False) -> int:
+    require_linux()
+
+    if interval < 0:
+        raise ValueError("interval must be >= 0")
+
+    try:
+        while True:
+            stamp = time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime())
+            print(f"== process base address monitor @ {stamp} ==")
+            print(format_process_base_snapshot(list_process_base_addresses(proc_root)))
+
+            if once or interval <= 0:
+                break
+
+            print()
+            time.sleep(interval)
+    except KeyboardInterrupt:
+        print("\nMonitor stopped.")
+
+    return 0
+
+
+# ---------------------------------------------------------------------------
 # Safety checks
 # ---------------------------------------------------------------------------
 
@@ -521,8 +690,67 @@ def hexdump(data: bytes, width: int = 16) -> str:
 # CLI demo
 # ---------------------------------------------------------------------------
 
-def main() -> int:
+def _build_arg_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description="LinuxKernelBridge demo plus a process base-address monitor"
+    )
+    parser.add_argument(
+        "--monitor",
+        action="store_true",
+        help="Continuously scan accessible /proc/<pid>/maps entries and print base addresses",
+    )
+    parser.add_argument(
+        "--interval",
+        type=float,
+        default=1.0,
+        help="Seconds between refreshes in monitor mode",
+    )
+    parser.add_argument(
+        "--once",
+        action="store_true",
+        help="Print one monitor snapshot and exit instead of looping",
+    )
+    parser.add_argument(
+        "--proc-root",
+        default="/proc",
+        help="Procfs root to scan in monitor mode",
+    )
+    parser.add_argument(
+        "--boost-priority",
+        action="store_true",
+        help="Raise the current process priority before running the demo or monitor",
+    )
+    parser.add_argument(
+        "--target-nice",
+        type=int,
+        default=-20,
+        help="Target nice level used with --boost-priority",
+    )
+    return parser
+
+
+def main(argv: Optional[list[str]] = None) -> int:
     require_linux()
+
+    parser = _build_arg_parser()
+    args = parser.parse_args(argv)
+
+    if args.boost_priority:
+        result = boost_current_process_priority(target_nice=args.target_nice)
+        print(
+            "CPU priority adjusted: "
+            f"scheduler={result.scheduler}, "
+            f"realtime={result.realtime}, "
+            f"nice={result.nice_level}. "
+            f"{result.message}"
+        )
+
+    if args.monitor:
+        return monitor_process_base_addresses(
+            interval=args.interval,
+            proc_root=args.proc_root,
+            once=args.once,
+        )
 
     print("== LinuxKernelBridge demo ==")
 

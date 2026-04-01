@@ -10,6 +10,8 @@ moving bytes from a server to a client with:
 - chunked delivery with ACK/NACK retries
 - end-to-end SHA-256 verification
 - optional packet-loss probing via Scapy, with a ping fallback
+- optional loopback packet capture of the TLS socket traffic with Scapy
+- CPU-side transfer tuning via sequential reads, larger socket buffers, and TCP_NODELAY
 
 The goal is not to guarantee that the network itself never drops a packet.
 The goal is to guarantee that the client only accepts data after it has been
@@ -33,6 +35,14 @@ Examples:
 
     # Loss probe
     python3 -m backend.secure_transfer probe-loss --host 127.0.0.1
+
+    # Loopback capture for a localhost server socket
+    python3 -m backend.secure_transfer server \
+        --file ./assets/sample.wav \
+        --cert ./certs/server.crt \
+        --key ./certs/server.key \
+        --host 127.0.0.1 --port 9443 \
+        --loopback-monitor --loopback-iface lo
 """
 
 from __future__ import annotations
@@ -48,8 +58,9 @@ import socket
 import ssl
 import struct
 import subprocess
+import threading
 import time
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass, asdict, field
 from pathlib import Path
 from typing import Callable, Optional, Tuple
 
@@ -59,6 +70,7 @@ DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 9443
 DEFAULT_CHUNK_SIZE = 64 * 1024
 DEFAULT_ACK_TIMEOUT = 10.0
+DEFAULT_SOCKET_BUFFER_SIZE = 2 * 1024 * 1024
 MAX_FRAME_SIZE = 128 * 1024 * 1024
 
 FRAME_JSON = 1
@@ -78,6 +90,7 @@ class TransferStats:
     sha256: str = ""
     filename: str = ""
     peer: str = ""
+    loopback_capture: Optional["LoopbackCaptureSummary"] = None
 
 
 @dataclass
@@ -86,6 +99,32 @@ class LossProbeResult:
     sent: int
     received: int
     loss_percentage: float
+
+
+@dataclass
+class LoopbackPacketRecord:
+    index: int
+    timestamp: float
+    direction: str
+    src: str
+    dst: str
+    sport: int
+    dport: int
+    flags: str
+    payload_len: int
+    payload_hex: str
+    payload_truncated: bool = False
+
+
+@dataclass
+class LoopbackCaptureSummary:
+    host: str
+    port: int
+    iface: str
+    packets_seen: int = 0
+    payload_packets: int = 0
+    payload_bytes: int = 0
+    records: list[LoopbackPacketRecord] = field(default_factory=list)
 
 
 def _read_exact(sock: socket.socket, size: int) -> bytes:
@@ -138,6 +177,37 @@ def _sha256_stream(stream_factory: Callable[[], io.BufferedReader], chunk_size: 
                 break
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def _measure_source(stream_factory: Callable[[], io.BufferedReader], chunk_size: int) -> Tuple[int, int, str]:
+    digest = hashlib.sha256()
+    total_bytes = 0
+
+    with stream_factory() as stream:
+        while True:
+            chunk = stream.read(chunk_size)
+            if not chunk:
+                break
+            if not isinstance(chunk, (bytes, bytearray)):
+                chunk = bytes(chunk or b"")
+            else:
+                chunk = bytes(chunk)
+            total_bytes += len(chunk)
+            digest.update(chunk)
+
+    total_chunks = 0 if total_bytes == 0 else math.ceil(total_bytes / chunk_size)
+    return total_bytes, total_chunks, digest.hexdigest()
+
+
+def _tune_socket(sock: socket.socket, buffer_size: int = DEFAULT_SOCKET_BUFFER_SIZE, tcp_nodelay: bool = True) -> None:
+    try:
+        if buffer_size > 0:
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, buffer_size)
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, buffer_size)
+        if tcp_nodelay and hasattr(socket, "TCP_NODELAY"):
+            sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+    except OSError as exc:
+        LOGGER.debug("Socket tuning skipped: %s", exc)
 
 
 def _build_server_context(
@@ -257,6 +327,136 @@ def probe_loss(host: str, count: int = 6, timeout: float = 1.0) -> LossProbeResu
     return _probe_loss_with_ping(host, count=count, timeout=timeout)
 
 
+def _build_loopback_record(
+    packet: object,
+    port: int,
+    packet_index: int,
+    payload_preview_bytes: int,
+) -> Optional[LoopbackPacketRecord]:
+    try:
+        from scapy.layers.inet import IP, TCP  # type: ignore
+    except Exception:
+        return None
+
+    try:
+        from scapy.layers.inet6 import IPv6  # type: ignore
+    except Exception:
+        IPv6 = None  # type: ignore
+
+    tcp = None
+    try:
+        tcp = packet[TCP]  # type: ignore[index]
+    except Exception:
+        return None
+
+    ip_layer = None
+    try:
+        ip_layer = packet.getlayer(IP)
+    except Exception:
+        ip_layer = None
+    if ip_layer is None and IPv6 is not None:
+        try:
+            ip_layer = packet.getlayer(IPv6)
+        except Exception:
+            ip_layer = None
+    if ip_layer is None:
+        return None
+
+    payload = bytes(getattr(tcp, "payload", b"") or b"")
+    if not payload:
+        return None
+
+    sport = int(getattr(tcp, "sport", 0) or 0)
+    dport = int(getattr(tcp, "dport", 0) or 0)
+    if dport == port:
+        direction = "client->server"
+    elif sport == port:
+        direction = "server->client"
+    else:
+        direction = "unknown"
+
+    preview = payload[: max(0, int(payload_preview_bytes))]
+    return LoopbackPacketRecord(
+        index=packet_index,
+        timestamp=float(getattr(packet, "time", time.time())),
+        direction=direction,
+        src=str(getattr(ip_layer, "src", "")),
+        dst=str(getattr(ip_layer, "dst", "")),
+        sport=sport,
+        dport=dport,
+        flags=str(getattr(tcp, "flags", "")),
+        payload_len=len(payload),
+        payload_hex=preview.hex(),
+        payload_truncated=len(preview) < len(payload),
+    )
+
+
+class LoopbackCaptureSession:
+    def __init__(
+        self,
+        host: str,
+        port: int,
+        iface: str = "lo",
+        payload_preview_bytes: int = 96,
+        max_records: int = 256,
+    ):
+        self.host = host
+        self.port = int(port)
+        self.iface = iface
+        self.payload_preview_bytes = max(0, int(payload_preview_bytes))
+        self.max_records = max(0, int(max_records))
+        self.summary = LoopbackCaptureSummary(host=host, port=self.port, iface=iface)
+        self._sniffer = None
+        self._lock = threading.Lock()
+
+    def _load_sniffer(self):
+        try:
+            from scapy.all import AsyncSniffer  # type: ignore
+        except Exception as exc:
+            raise RuntimeError("Scapy is required for loopback capture.") from exc
+        return AsyncSniffer
+
+    def _handle_packet(self, packet: object) -> None:
+        with self._lock:
+            self.summary.packets_seen += 1
+            record_index = self.summary.payload_packets + 1
+
+        record = _build_loopback_record(packet, self.port, record_index, self.payload_preview_bytes)
+        if record is None:
+            return
+
+        with self._lock:
+            self.summary.payload_packets += 1
+            self.summary.payload_bytes += record.payload_len
+            if self.max_records == 0 or len(self.summary.records) < self.max_records:
+                self.summary.records.append(record)
+
+    def start(self) -> "LoopbackCaptureSession":
+        if self._sniffer is not None:
+            return self
+
+        AsyncSniffer = self._load_sniffer()
+        self._sniffer = AsyncSniffer(
+            iface=self.iface,
+            filter=f"tcp and port {self.port}",
+            prn=self._handle_packet,
+            store=False,
+        )
+        self._sniffer.start()
+        time.sleep(0.1)
+        return self
+
+    def stop(self) -> LoopbackCaptureSummary:
+        sniffer = self._sniffer
+        self._sniffer = None
+        if sniffer is not None:
+            try:
+                sniffer.stop()
+            except Exception as exc:
+                LOGGER.warning("Loopback sniffer stop failed: %s", exc)
+        return self.summary
+
+
 class SecureTransferServer:
     def __init__(
         self,
@@ -269,12 +469,24 @@ class SecureTransferServer:
         chunk_size: int = DEFAULT_CHUNK_SIZE,
         ack_timeout: float = DEFAULT_ACK_TIMEOUT,
         max_retries: int = 5,
+        socket_buffer_size: int = DEFAULT_SOCKET_BUFFER_SIZE,
+        tcp_nodelay: bool = True,
+        loopback_monitor: bool = False,
+        loopback_iface: str = "lo",
+        loopback_payload_preview_bytes: int = 96,
+        loopback_max_records: int = 256,
     ):
         self.host = host
         self.port = port
         self.chunk_size = max(1024, int(chunk_size))
         self.ack_timeout = float(ack_timeout)
         self.max_retries = max(1, int(max_retries))
+        self.socket_buffer_size = max(0, int(socket_buffer_size))
+        self.tcp_nodelay = bool(tcp_nodelay)
+        self.loopback_monitor = bool(loopback_monitor)
+        self.loopback_iface = loopback_iface
+        self.loopback_payload_preview_bytes = max(0, int(loopback_payload_preview_bytes))
+        self.loopback_max_records = max(0, int(loopback_max_records))
         self.context = _build_server_context(
             cert_file=cert_file,
             key_file=key_file,
@@ -288,16 +500,7 @@ class SecureTransferServer:
         source_name: str,
         once: bool = False,
     ) -> TransferStats:
-        with source_factory() as stream:
-            total_bytes = 0
-            while True:
-                chunk = stream.read(self.chunk_size)
-                if not chunk:
-                    break
-                total_bytes += len(chunk)
-
-        total_chunks = 0 if total_bytes == 0 else math.ceil(total_bytes / self.chunk_size)
-        sha256 = _sha256_stream(source_factory, self.chunk_size)
+        total_bytes, total_chunks, sha256 = _measure_source(source_factory, self.chunk_size)
 
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_socket:
             server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -305,22 +508,50 @@ class SecureTransferServer:
             server_socket.listen(1)
             LOGGER.info("Secure transfer server listening on %s:%s", self.host, self.port)
             LOGGER.info("Serving %s (%s bytes, %s chunks)", source_name, total_bytes, total_chunks)
+            if self.loopback_monitor:
+                LOGGER.info(
+                    "Loopback capture enabled on iface=%s for tcp port %s",
+                    self.loopback_iface,
+                    self.port,
+                )
 
             while True:
-                raw_conn, addr = server_socket.accept()
-                stats = TransferStats(filename=source_name, peer=f"{addr[0]}:{addr[1]}", sha256=sha256)
-                LOGGER.info("Accepted secure transfer client from %s", stats.peer)
-                with self.context.wrap_socket(raw_conn, server_side=True) as conn:
-                    conn.settimeout(self.ack_timeout)
-                    self._serve_one_connection(
-                        conn=conn,
-                        source_factory=source_factory,
-                        source_name=source_name,
-                        total_bytes=total_bytes,
-                        total_chunks=total_chunks,
-                        sha256=sha256,
-                        stats=stats,
-                    )
+                capture_session = None
+                if self.loopback_monitor:
+                    capture_session = LoopbackCaptureSession(
+                        host=self.host,
+                        port=self.port,
+                        iface=self.loopback_iface,
+                        payload_preview_bytes=self.loopback_payload_preview_bytes,
+                        max_records=self.loopback_max_records,
+                    ).start()
+
+                stats = None
+                try:
+                    raw_conn, addr = server_socket.accept()
+                    _tune_socket(raw_conn, self.socket_buffer_size, self.tcp_nodelay)
+                    stats = TransferStats(filename=source_name, peer=f"{addr[0]}:{addr[1]}", sha256=sha256)
+                    LOGGER.info("Accepted secure transfer client from %s", stats.peer)
+                    with self.context.wrap_socket(raw_conn, server_side=True) as conn:
+                        conn.settimeout(self.ack_timeout)
+                        self._serve_one_connection(
+                            conn=conn,
+                            source_factory=source_factory,
+                            source_name=source_name,
+                            total_bytes=total_bytes,
+                            total_chunks=total_chunks,
+                            sha256=sha256,
+                            stats=stats,
+                        )
+                finally:
+                    if capture_session is not None:
+                        capture_summary = capture_session.stop()
+                        if stats is not None:
+                            stats.loopback_capture = capture_summary
+
+                if stats is None:
+                    continue
+
                 LOGGER.info("Transfer finished for %s", stats.peer)
                 LOGGER.info("Transfer stats: %s", json.dumps(asdict(stats), sort_keys=True))
                 if once:
@@ -351,13 +582,14 @@ class SecureTransferServer:
             raise ValueError(f"Client did not send ready frame: {ready}")
 
         with source_factory() as stream:
-            for seq in range(total_chunks):
-                offset = seq * self.chunk_size
-                stream.seek(offset)
+            seq = 0
+            while True:
                 chunk = stream.read(self.chunk_size)
                 if not isinstance(chunk, (bytes, bytearray)):
                     chunk = bytes(chunk or b"")
                 chunk = bytes(chunk)
+                if not chunk:
+                    break
                 chunk_sha = _sha256_bytes(chunk)
                 header = {
                     "type": "chunk",
@@ -393,6 +625,7 @@ class SecureTransferServer:
                     if attempt == self.max_retries:
                         raise ValueError(f"Chunk {seq} failed verification after {self.max_retries} attempts: {ack}")
                     time.sleep(0.05)
+                seq += 1
 
         final = _recv_json(conn)
         if final.get("type") != "done":
@@ -437,12 +670,16 @@ class SecureTransferClient:
         chunk_size: int = DEFAULT_CHUNK_SIZE,
         insecure: bool = False,
         timeout: float = DEFAULT_ACK_TIMEOUT,
+        socket_buffer_size: int = DEFAULT_SOCKET_BUFFER_SIZE,
+        tcp_nodelay: bool = True,
     ):
         self.host = host
         self.port = port
         self.server_name = server_name or host
         self.chunk_size = max(1024, int(chunk_size))
         self.timeout = float(timeout)
+        self.socket_buffer_size = max(0, int(socket_buffer_size))
+        self.tcp_nodelay = bool(tcp_nodelay)
         self.context = _build_client_context(
             cafile=cafile,
             cert_file=cert_file,
@@ -455,6 +692,7 @@ class SecureTransferClient:
         output.parent.mkdir(parents=True, exist_ok=True)
 
         with socket.create_connection((self.host, self.port), timeout=self.timeout) as raw_sock:
+            _tune_socket(raw_sock, self.socket_buffer_size, self.tcp_nodelay)
             with self.context.wrap_socket(raw_sock, server_hostname=self.server_name) as conn:
                 conn.settimeout(self.timeout)
                 manifest = _recv_json(conn)
@@ -578,7 +816,49 @@ def _build_parser() -> argparse.ArgumentParser:
     server.add_argument("--chunk-size", type=int, default=DEFAULT_CHUNK_SIZE)
     server.add_argument("--ack-timeout", type=float, default=DEFAULT_ACK_TIMEOUT)
     server.add_argument("--max-retries", type=int, default=5)
+    server.add_argument(
+        "--socket-buffer-size",
+        type=int,
+        default=DEFAULT_SOCKET_BUFFER_SIZE,
+        help="Increase kernel socket buffers to improve transfer throughput.",
+    )
+    server_tcp = server.add_mutually_exclusive_group()
+    server_tcp.add_argument(
+        "--tcp-nodelay",
+        dest="tcp_nodelay",
+        action="store_true",
+        help="Disable Nagle's algorithm for lower per-chunk latency.",
+    )
+    server_tcp.add_argument(
+        "--no-tcp-nodelay",
+        dest="tcp_nodelay",
+        action="store_false",
+        help="Keep Nagle's algorithm enabled.",
+    )
+    server.set_defaults(tcp_nodelay=True)
     server.add_argument("--once", action="store_true", help="Serve one client and exit.")
+    server.add_argument(
+        "--loopback-monitor",
+        action="store_true",
+        help="Capture localhost TCP payload bytes on the loopback interface with Scapy while serving.",
+    )
+    server.add_argument(
+        "--loopback-iface",
+        default="lo",
+        help="Interface used for loopback capture when --loopback-monitor is enabled.",
+    )
+    server.add_argument(
+        "--loopback-payload-preview-bytes",
+        type=int,
+        default=96,
+        help="How many payload bytes to keep in each captured record preview.",
+    )
+    server.add_argument(
+        "--loopback-max-records",
+        type=int,
+        default=256,
+        help="Maximum number of payload records to retain in memory.",
+    )
 
     client = subparsers.add_parser("client", help="Run a secure transfer client.")
     client.add_argument("--host", default=os.getenv("SOCKET_HOST", DEFAULT_HOST))
@@ -590,6 +870,26 @@ def _build_parser() -> argparse.ArgumentParser:
     client.add_argument("--server-name", default=os.getenv("SSL_SERVER_NAME", ""))
     client.add_argument("--chunk-size", type=int, default=DEFAULT_CHUNK_SIZE)
     client.add_argument("--timeout", type=float, default=DEFAULT_ACK_TIMEOUT)
+    client.add_argument(
+        "--socket-buffer-size",
+        type=int,
+        default=DEFAULT_SOCKET_BUFFER_SIZE,
+        help="Increase kernel socket buffers to improve transfer throughput.",
+    )
+    client_tcp = client.add_mutually_exclusive_group()
+    client_tcp.add_argument(
+        "--tcp-nodelay",
+        dest="tcp_nodelay",
+        action="store_true",
+        help="Disable Nagle's algorithm for lower per-chunk latency.",
+    )
+    client_tcp.add_argument(
+        "--no-tcp-nodelay",
+        dest="tcp_nodelay",
+        action="store_false",
+        help="Keep Nagle's algorithm enabled.",
+    )
+    client.set_defaults(tcp_nodelay=True)
     client.add_argument("--insecure", action="store_true", help="Disable certificate verification for local testing.")
 
     probe = subparsers.add_parser("probe-loss", help="Measure packet loss using Scapy or ping.")
@@ -618,6 +918,12 @@ def main(argv: Optional[list[str]] = None) -> int:
             chunk_size=args.chunk_size,
             ack_timeout=args.ack_timeout,
             max_retries=args.max_retries,
+            socket_buffer_size=args.socket_buffer_size,
+            tcp_nodelay=args.tcp_nodelay,
+            loopback_monitor=args.loopback_monitor,
+            loopback_iface=args.loopback_iface,
+            loopback_payload_preview_bytes=args.loopback_payload_preview_bytes,
+            loopback_max_records=args.loopback_max_records,
         )
         server.serve_file(args.file, once=args.once)
         return 0
@@ -632,6 +938,8 @@ def main(argv: Optional[list[str]] = None) -> int:
             server_name=args.server_name or None,
             chunk_size=args.chunk_size,
             timeout=args.timeout,
+            socket_buffer_size=args.socket_buffer_size,
+            tcp_nodelay=args.tcp_nodelay,
             insecure=args.insecure,
         )
         client.download(args.output)

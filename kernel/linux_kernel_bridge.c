@@ -13,6 +13,10 @@
  *   - write() updates the buffer at the current file position
  *   - llseek() moves the file position
  *   - ioctl() can fetch stats or clear the buffer
+ *
+ * The buffer size is tunable with the buffer_capacity module parameter so the
+ * module can be loaded with a smaller payload when you want to reduce kernel
+ * memory use and copy overhead.
  */
 
 #include <linux/fs.h>
@@ -42,9 +46,12 @@ struct lkbridge_device {
 
 static struct lkbridge_device g_dev;
 static int allowed_uid = -1;
+static unsigned int buffer_capacity = LKBRIDGE_BUFFER_CAPACITY;
 
 module_param(allowed_uid, int, 0644);
 MODULE_PARM_DESC(allowed_uid, "UID allowed to access /dev/linux_kernel_bridge and /proc/linux_kernel_bridge");
+module_param(buffer_capacity, uint, 0644);
+MODULE_PARM_DESC(buffer_capacity, "Maximum bytes stored in the /dev/linux_kernel_bridge buffer");
 
 static int lkbridge_proc_show(struct seq_file *m, void *v);
 static void lkbridge_reset_locked(void);
@@ -346,6 +353,7 @@ static int lkbridge_proc_show(struct seq_file *m, void *v)
 static int __init lkbridge_init(void)
 {
 	int ret;
+	unsigned int capacity;
 
 	memset(&g_dev, 0, sizeof(g_dev));
 	mutex_init(&g_dev.lock);
@@ -353,7 +361,10 @@ static int __init lkbridge_init(void)
 		allowed_uid = lkbridge_current_uid();
 	if (allowed_uid < 0)
 		return -EINVAL;
-	g_dev.capacity = LKBRIDGE_BUFFER_CAPACITY;
+	capacity = buffer_capacity;
+	if (capacity < 256)
+		capacity = 256;
+	g_dev.capacity = (size_t)capacity;
 	g_dev.buffer = kzalloc(g_dev.capacity, GFP_KERNEL);
 	if (!g_dev.buffer)
 		return -ENOMEM;
