@@ -414,9 +414,13 @@ class NetworkToolkit:
         Args:
             target_ip: Target IP to monitor
             target_size_mb: Target size in MB
-            duration: Monitoring duration in seconds
+            duration: Monitoring duration in seconds. Use 0 to run until interrupted.
         """
-        logger.info(f"Starting connection monitoring for {duration} seconds...")
+        continuous = duration <= 0
+        if continuous:
+            logger.info("Starting connection monitoring until interrupted...")
+        else:
+            logger.info(f"Starting connection monitoring for {duration} seconds...")
         logger.info(f"Target: {target_ip}, Size: {target_size_mb} MB")
         
         self.is_monitoring = True
@@ -431,7 +435,7 @@ class NetworkToolkit:
         target_size_bytes = target_size_mb * 1024 * 1024
         
         try:
-            while time.time() - start_time < duration and self.is_monitoring:
+            while self.is_monitoring and (continuous or time.time() - start_time < duration):
                 # Send probe packet
                 success = self._send_probe_packet(target_ip, size=1024)
                 
@@ -445,7 +449,7 @@ class NetworkToolkit:
                     )
                 
                 # Check if we've reached target size
-                if self.connection_stats.bytes_sent >= target_size_bytes:
+                if not continuous and self.connection_stats.bytes_sent >= target_size_bytes:
                     logger.info(f"Target size of {target_size_mb} MB reached!")
                     break
                 
@@ -468,6 +472,8 @@ class NetworkToolkit:
         logger.info(f"Loss percentage: {self.connection_stats.loss_percentage:.2f}%")
         logger.info(f"Target size: {target_size_mb} MB")
         logger.info(f"Actual size sent: {self.connection_stats.current_size_mb:.2f} MB")
+        if continuous:
+            logger.info("Continuous mode ended by interrupt or stop signal")
         logger.info("=" * 50)
         
         return asdict(self.connection_stats)
@@ -761,7 +767,7 @@ def main():
     parser.add_argument('--scan-ports', help='Scan ports on specific IP')
     parser.add_argument('--monitor', help='Monitor connection to target IP')
     parser.add_argument('--monitor-size', type=int, default=3, help='Target size in MB for monitoring')
-    parser.add_argument('--monitor-duration', type=int, default=60, help='Monitoring duration in seconds')
+    parser.add_argument('--monitor-duration', type=int, default=60, help='Monitoring duration in seconds (0 runs until interrupted)')
     parser.add_argument('--firewall', action='store_true', help='Setup firewall rules')
     parser.add_argument('--info', action='store_true', help='Show network information')
     parser.add_argument('--kernel-info', action='store_true', help='Show Linux kernel bridge information')
